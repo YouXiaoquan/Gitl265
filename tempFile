@@ -1,0 +1,730 @@
+
+
+-O3 -ffloat-store -Wuninitialized 
+
+
+
+
+%include "x86inc.asm"
+
+extern pshuffq_zero
+extern pshuffd_zero
+
+SECTION .rodata align=16
+
+partial_buffer_fly32_dst_8_1_t32	DW			 64,  64,  64, -64,  83,  36,  36, -83
+partial_buffer_fly32_dst_8_2_t32	DW			 89,  75,  50,  18,  75, -18, -89, -50
+									DW			 50, -89,  18,  75,  18, -50,  75, -89
+
+dct_t32								DW			 64,  90,  90,  90,  89,  88,  87,  85
+									DW			 83,  82,  80,  78,  75,  73,  70,  67
+									DW			 64,  61,  57,  54,  50,  46,  43,  38
+									DW			 36,  31,  25,  22,  18,  13,   9,   4
+									DW			 64,  90,  87,  82,  75,  67,  57,  46
+									DW			 36,  22,   9,  -4, -18, -31, -43, -54
+									DW			-64, -73, -80, -85, -89, -90, -90, -88
+									DW			-83, -78, -70, -61, -50, -38, -25, -13
+									DW			 64,  88,  80,  67,  50,  31,   9, -13
+									DW			-36, -54, -70, -82, -89, -90, -87, -78
+									DW			-64, -46, -25,  -4,  18,  38,  57,  73
+									DW			 83,  90,  90,  85,  75,  61,  43,  22
+									DW			 64,  85,  70,  46,  18, -13, -43, -67
+									DW			-83, -90, -87, -73, -50, -22,   9,  38
+									DW			 64,  82,  90,  88,  75,  54,  25,  -4
+									DW			-36, -61, -80, -90, -89, -78, -57, -31
+									DW			 64,  82,  57,  22, -18, -54, -80, -90
+									DW			-83, -61, -25,  13,  50,  78,  90,  85
+									DW			 64,  31,  -9, -46, -75, -90, -87, -67
+									DW			-36,   4,  43,  73,  89,  88,  70,  38
+									DW			 64,  78,  43,  -4, -50, -82, -90, -73
+									DW			-36,  13,  57,  85,  89,  67,  25, -22
+									DW			-64, -88, -87, -61, -18,  31,  70,  90
+									DW			 83,  54,   9, -38, -75, -90, -80, -46
+									DW			 64,  73,  25, -31, -75, -90, -70, -22
+									DW			 36,  78,  90,  67,  18, -38, -80, -90
+									DW			-64, -13,  43,  82,  89,  61,   9, -46
+									DW			-83, -88, -57,  -4,  50,  85,  87,  54
+									DW			 64,  67,   9, -54, -89, -78, -25,  38
+									DW			 83,  85,  43, -22, -75, -90, -57,   4
+									DW			 64,  90,  70,  13, -50, -88, -80, -31
+									DW			 36,  82,  87,  46, -18, -73, -90, -61
+									DW			 64,  61,  -9, -73, -89, -46,  25,  82
+									DW			 83,  31, -43, -88, -75, -13,  57,  90
+									DW			 64,  -4, -70, -90, -50,  22,  80,  85
+									DW			 36, -38, -87, -78, -18,  54,  90,  67
+									DW			 64,  54, -25, -85, -75,  -4,  70,  88
+									DW			 36, -46, -90, -61,  18,  82,  80,  13
+									DW			-64, -90, -43,  38,  89,  67,  -9, -78
+									DW			-83, -22,  57,  90,  50, -31, -87, -73
+									DW			 64,  46, -43, -90, -50,  38,  90,  54
+									DW			-36, -90, -57,  31,  89,  61, -25, -88
+									DW			-64,  22,  87,  67, -18, -85, -70,  13
+									DW			 83,  73,  -9, -82, -75,   4,  80,  78
+									DW			 64,  38, -57, -88, -18,  73,  80,  -4
+									DW			-83, -67,  25,  90,  50, -46, -90, -31
+									DW			 64,  85,   9, -78, -75,  13,  87,  61
+									DW			-36, -90, -43,  54,  89,  22, -70, -82
+									DW			 64,  31, -70, -78,  18,  90,  43, -61
+									DW			-83,   4,  87,  54, -50, -88,  -9,  82
+									DW			 64, -38, -90, -22,  75,  73, -25, -90
+									DW			-36,  67,  80, -13, -89, -46,  57,  85
+									DW			 64,  22, -80, -61,  50,  85,  -9, -90
+									DW			-36,  73,  70, -38, -89,  -4,  87,  46
+									DW			-64, -78,  25,  90,  18, -82, -57,  54
+									DW			 83, -13, -90, -31,  75,  67, -43, -88
+									DW			 64,  13, -87, -38,  75,  61, -57, -78
+									DW			 36,  88,  -9, -90, -18,  85,  43, -73
+									DW			-64,  54,  80, -31, -89,   4,  90,  22
+									DW			-83, -46,  70,  67, -50, -82,  25,  90
+									DW			 64,   4, -90, -13,  89,  22, -87, -31
+									DW			 83,  38, -80, -46,  75,  54, -70, -61
+									DW			 64,  67, -57, -73,  50,  78, -43, -82
+									DW			 36,  85, -25, -88,  18,  90,  -9, -90
+									DW			 64,  -4, -90,  13,  89, -22, -87,  31
+									DW			 83, -38, -80,  46,  75, -54, -70,  61
+									DW			 64, -67, -57,  73,  50, -78, -43,  82
+									DW			 36, -85, -25,  88,  18, -90,  -9,  90
+									DW			 64, -13, -87,  38,  75, -61, -57,  78
+									DW			 36, -88,  -9,  90, -18, -85,  43,  73
+									DW			-64, -54,  80,  31, -89,  -4,  90, -22
+									DW			-83,  46,  70, -67, -50,  82,  25, -90
+									DW			 64, -22, -80,  61,  50, -85,  -9,  90
+									DW			-36, -73,  70,  38, -89,   4,  87, -46
+									DW			-64,  78,  25, -90,  18,  82, -57, -54
+									DW			 83,  13, -90,  31,  75, -67, -43,  88
+									DW			 64, -31, -70,  78,  18, -90,  43,  61
+									DW			-83,  -4,  87, -54, -50,  88,  -9, -82
+									DW			 64,  38, -90,  22,  75, -73, -25,  90
+									DW			-36, -67,  80,  13, -89,  46,  57, -85
+									DW			 64, -38, -57,  88, -18, -73,  80,   4
+									DW			-83,  67,  25, -90,  50,  46, -90,  31
+									DW			 64, -85,   9,  78, -75, -13,  87, -61
+									DW			-36,  90, -43, -54,  89, -22, -70,  82
+									DW			 64, -46, -43,  90, -50, -38,  90, -54
+									DW			-36,  90, -57, -31,  89, -61, -25,  88
+									DW			-64, -22,  87, -67, -18,  85, -70, -13
+									DW			 83, -73,  -9,  82, -75,  -4,  80, -78
+									DW			 64, -54, -25,  85, -75,   4,  70, -88
+									DW			 36,  46, -90,  61,  18, -82,  80, -13
+									DW			-64,  90, -43, -38,  89, -67,  -9,  78
+									DW			-83,  22,  57, -90,  50,  31, -87,  73
+									DW			 64, -61,  -9,  73, -89,  46,  25, -82
+									DW			 83, -31, -43,  88, -75,  13,  57, -90
+									DW			 64,   4, -70,  90, -50, -22,  80, -85
+									DW			 36,  38, -87,  78, -18, -54,  90, -67
+									DW			 64, -67,   9,  54, -89,  78, -25, -38
+									DW			 83, -85,  43,  22, -75,  90, -57,  -4
+									DW			 64, -90,  70, -13, -50,  88, -80,  31
+									DW			 36, -82,  87, -46, -18,  73, -90,  61
+									DW			 64, -73,  25,  31, -75,  90, -70,  22
+									DW			 36, -78,  90, -67,  18,  38, -80,  90
+									DW			-64,  13,  43, -82,  89, -61,   9,  46
+									DW			-83,  88, -57,   4,  50, -85,  87, -54
+									DW			 64, -78,  43,   4, -50,  82, -90,  73
+									DW			-36, -13,  57, -85,  89, -67,  25,  22
+									DW			-64,  88, -87,  61, -18, -31,  70, -90
+									DW			 83, -54,   9,  38, -75,  90, -80,  46
+									DW			 64, -82,  57, -22, -18,  54, -80,  90
+									DW			-83,  61, -25, -13,  50, -78,  90, -85
+									DW			 64, -31,  -9,  46, -75,  90, -87,  67
+									DW			-36,  -4,  43, -73,  89, -88,  70, -38
+									DW			 64, -85,  70, -46,  18,  13, -43,  67
+									DW			-83,  90, -87,  73, -50,  22,   9, -38
+									DW			 64, -82,  90, -88,  75, -54,  25,   4
+									DW			-36,  61, -80,  90, -89,  78, -57,  31
+									DW			 64, -88,  80, -67,  50, -31,   9,  13
+									DW			-36,  54, -70,  82, -89,  90, -87,  78
+									DW			-64,  46, -25,   4,  18, -38,  57, -73
+									DW			 83, -90,  90, -85,  75, -61,  43, -22
+									DW			 64, -90,  87, -82,  75, -67,  57, -46
+									DW			 36, -22,   9,   4, -18,  31, -43,  54
+									DW			-64,  73, -80,  85, -89,  90, -90,  88
+									DW			-83,  78, -70,  61, -50,  38, -25,  13
+									DW			 64, -90,  90, -90,  89, -88,  87, -85
+									DW			 83, -82,  80, -78,  75, -73,  70, -67
+									DW			 64, -61,  57, -54,  50, -46,  43, -38
+									DW			 36, -31,  25, -22,  18, -13,   9,  -4
+
+partial_buffer_fly32_t32			DW			 64,  64,  64,  64,  64,  64,  64,  64
+									DW			 64,  64,  64,  64,  64,  64,  64,  64
+									DW			 64,  64,  64,  64,  64,  64,  64,  64
+									DW			 64,  64,  64,  64,  64,  64,  64,  64
+									DW			 90,  90,  88,  85,  82,  78,  73,  67
+									DW			 61,  54,  46,  38,  31,  22,  13,   4
+									DW			 -4, -13, -22, -31, -38, -46, -54, -61
+									DW			-67, -73, -78, -82, -85, -88, -90, -90
+									DW			 90,  87,  80,  70,  57,  43,  25,   9
+									DW			 -9, -25, -43, -57, -70, -80, -87, -90
+									DW			-90, -87, -80, -70, -57, -43, -25,  -9
+									DW			  9,  25,  43,  57,  70,  80,  87,  90
+									DW			 90,  82,  67,  46,  22,  -4, -31, -54
+									DW			-73, -85, -90, -88, -78, -61, -38, -13
+									DW			 13,  38,  61,  78,  88,  90,  85,  73
+									DW			 54,  31,   4, -22, -46, -67, -82, -90
+									DW			 89,  75,  50,  18, -18, -50, -75, -89
+									DW			-89, -75, -50, -18,  18,  50,  75,  89
+									DW			 89,  75,  50,  18, -18, -50, -75, -89
+									DW			-89, -75, -50, -18,  18,  50,  75,  89
+									DW			 88,  67,  31, -13, -54, -82, -90, -78
+									DW			-46,  -4,  38,  73,  90,  85,  61,  22
+									DW			-22, -61, -85, -90, -73, -38,   4,  46
+									DW			 78,  90,  82,  54,  13, -31, -67, -88
+									DW			 87,  57,   9, -43, -80, -90, -70, -25
+									DW			 25,  70,  90,  80,  43,  -9, -57, -87
+									DW			-87, -57,  -9,  43,  80,  90,  70,  25
+									DW			-25, -70, -90, -80, -43,   9,  57,  87
+									DW			 85,  46, -13, -67, -90, -73, -22,  38
+									DW			 82,  88,  54,  -4, -61, -90, -78, -31
+									DW			 31,  78,  90,  61,   4, -54, -88, -82
+									DW			-38,  22,  73,  90,  67,  13, -46, -85
+									DW			 83,  36, -36, -83, -83, -36,  36,  83
+									DW			 83,  36, -36, -83, -83, -36,  36,  83
+									DW			 83,  36, -36, -83, -83, -36,  36,  83
+									DW			 83,  36, -36, -83, -83, -36,  36,  83
+									DW			 82,  22, -54, -90, -61,  13,  78,  85
+									DW			 31, -46, -90, -67,   4,  73,  88,  38
+									DW			-38, -88, -73,  -4,  67,  90,  46, -31
+									DW			-85, -78, -13,  61,  90,  54, -22, -82
+									DW			 80,   9, -70, -87, -25,  57,  90,  43
+									DW			-43, -90, -57,  25,  87,  70,  -9, -80
+									DW			-80,  -9,  70,  87,  25, -57, -90, -43
+									DW			 43,  90,  57, -25, -87, -70,   9,  80
+									DW			 78,  -4, -82, -73,  13,  85,  67, -22
+									DW			-88, -61,  31,  90,  54, -38, -90, -46
+									DW			 46,  90,  38, -54, -90, -31,  61,  88
+									DW			 22, -67, -85, -13,  73,  82,   4, -78
+									DW			 75, -18, -89, -50,  50,  89,  18, -75
+									DW			-75,  18,  89,  50, -50, -89, -18,  75
+									DW			 75, -18, -89, -50,  50,  89,  18, -75
+									DW			-75,  18,  89,  50, -50, -89, -18,  75
+									DW			 73, -31, -90, -22,  78,  67, -38, -90
+									DW			-13,  82,  61, -46, -88,  -4,  85,  54
+									DW			-54, -85,   4,  88,  46, -61, -82,  13
+									DW			 90,  38, -67, -78,  22,  90,  31, -73
+									DW			 70, -43, -87,   9,  90,  25, -80, -57
+									DW			 57,  80, -25, -90,  -9,  87,  43, -70
+									DW			-70,  43,  87,  -9, -90, -25,  80,  57
+									DW			-57, -80,  25,  90,   9, -87, -43,  70
+									DW			 67, -54, -78,  38,  85, -22, -90,   4
+									DW			 90,  13, -88, -31,  82,  46, -73, -61
+									DW			 61,  73, -46, -82,  31,  88, -13, -90
+									DW			 -4,  90,  22, -85, -38,  78,  54, -67
+									DW			 64, -64, -64,  64,  64, -64, -64,  64
+									DW			 64, -64, -64,  64,  64, -64, -64,  64
+									DW			 64, -64, -64,  64,  64, -64, -64,  64
+									DW			 64, -64, -64,  64,  64, -64, -64,  64
+									DW			 61, -73, -46,  82,  31, -88, -13,  90
+									DW			 -4, -90,  22,  85, -38, -78,  54,  67
+									DW			-67, -54,  78,  38, -85, -22,  90,   4
+									DW			-90,  13,  88, -31, -82,  46,  73, -61
+									DW			 57, -80, -25,  90,  -9, -87,  43,  70
+									DW			-70, -43,  87,   9, -90,  25,  80, -57
+									DW			-57,  80,  25, -90,   9,  87, -43, -70
+									DW			 70,  43, -87,  -9,  90, -25, -80,  57
+									DW			 54, -85,  -4,  88, -46, -61,  82,  13
+									DW			-90,  38,  67, -78, -22,  90, -31, -73
+									DW			 73,  31, -90,  22,  78, -67, -38,  90
+									DW			-13, -82,  61,  46, -88,   4,  85, -54
+									DW			 50, -89,  18,  75, -75, -18,  89, -50
+									DW			-50,  89, -18, -75,  75,  18, -89,  50
+									DW			 50, -89,  18,  75, -75, -18,  89, -50
+									DW			-50,  89, -18, -75,  75,  18, -89,  50
+									DW			 46, -90,  38,  54, -90,  31,  61, -88
+									DW			 22,  67, -85,  13,  73, -82,   4,  78
+									DW			-78,  -4,  82, -73, -13,  85, -67, -22
+									DW			 88, -61, -31,  90, -54, -38,  90, -46
+									DW			 43, -90,  57,  25, -87,  70,   9, -80
+									DW			 80,  -9, -70,  87, -25, -57,  90, -43
+									DW			-43,  90, -57, -25,  87, -70,  -9,  80
+									DW			-80,   9,  70, -87,  25,  57, -90,  43
+									DW			 38, -88,  73,  -4, -67,  90, -46, -31
+									DW			 85, -78,  13,  61, -90,  54,  22, -82
+									DW			 82, -22, -54,  90, -61, -13,  78, -85
+									DW			 31,  46, -90,  67,   4, -73,  88, -38
+									DW			 36, -83,  83, -36, -36,  83, -83,  36
+									DW			 36, -83,  83, -36, -36,  83, -83,  36
+									DW			 36, -83,  83, -36, -36,  83, -83,  36
+									DW			 36, -83,  83, -36, -36,  83, -83,  36
+									DW			 31, -78,  90, -61,   4,  54, -88,  82
+									DW			-38, -22,  73, -90,  67, -13, -46,  85
+									DW			-85,  46,  13, -67,  90, -73,  22,  38
+									DW			-82,  88, -54,  -4,  61, -90,  78, -31
+									DW			 25, -70,  90, -80,  43,   9, -57,  87
+									DW			-87,  57,  -9, -43,  80, -90,  70, -25
+									DW			-25,  70, -90,  80, -43,  -9,  57, -87
+									DW			 87, -57,   9,  43, -80,  90, -70,  25
+									DW			 22, -61,  85, -90,  73, -38,  -4,  46
+									DW			-78,  90, -82,  54, -13, -31,  67, -88
+									DW			 88, -67,  31,  13, -54,  82, -90,  78
+									DW			-46,   4,  38, -73,  90, -85,  61, -22
+									DW			 18, -50,  75, -89,  89, -75,  50, -18
+									DW			-18,  50, -75,  89, -89,  75, -50,  18
+									DW			 18, -50,  75, -89,  89, -75,  50, -18
+									DW			-18,  50, -75,  89, -89,  75, -50,  18
+									DW			 13, -38,  61, -78,  88, -90,  85, -73
+									DW			 54, -31,   4,  22, -46,  67, -82,  90
+									DW			-90,  82, -67,  46, -22,  -4,  31, -54
+									DW			 73, -85,  90, -88,  78, -61,  38, -13
+									DW			  9, -25,  43, -57,  70, -80,  87, -90
+									DW			 90, -87,  80, -70,  57, -43,  25,  -9
+									DW			 -9,  25, -43,  57, -70,  80, -87,  90
+									DW			-90,  87, -80,  70, -57,  43, -25,   9
+									DW			  4, -13,  22, -31,  38, -46,  54, -61
+									DW			 67, -73,  78, -82,  85, -88,  90, -90
+									DW			 90, -90,  88, -85,  82, -78,  73, -67
+									DW			 61, -54,  46, -38,  31, -22,  13,  -4
+
+pshuffb_reverse_7_0_int16_t			DB			14, 15, 12, 13, 10, 11, 8, 9
+									DB			 6,  7,  4,  5,  2,  3, 0, 1
+pshuffb_reverse_3_0_int16_t			DB			 6,  7,  4,  5,  2,  3, 0, 1
+									DB			 6,  7,  4,  5,  2,  3, 0, 1
+pshuffb_reverse_1_0_int16_t			DB			 2,  3,  0,  1,  2,  3, 0, 1
+									DB			 2,  3,  0,  1,  2,  3, 0, 1
+
+
+SECTION .text align=16
+
+
+%macro			CALCULATE_E_O_PARTIAL_BUFFER_FLY32						0
+	LDDQU  XMM1, [SRC                        ]
+	MOVDQA XMM2, XMM1
+	LDDQU  XMM0, [SRC+24*SIZE_OF_INT16_T     ]
+	PSHUFB XMM0, [pshuffb_reverse_7_0_int16_t]
+	PADDW XMM1, XMM0
+	PSUBW XMM2, XMM0
+	MOVDQA [E], XMM1
+	MOVDQA [O], XMM2
+
+	LDDQU  XMM1, [SRC+ 8*SIZE_OF_INT16_T     ]
+	MOVDQA XMM2, XMM1
+	LDDQU  XMM0, [SRC+16*SIZE_OF_INT16_T     ]
+	PSHUFB XMM0, [pshuffb_reverse_7_0_int16_t]
+	PADDW XMM1, XMM0
+	PSUBW XMM2, XMM0
+	MOVDQA [E+8*SIZE_OF_INT16_T], XMM1
+	MOVDQA [O+8*SIZE_OF_INT16_T], XMM2
+%endmacro
+
+%macro			CALCULATE_EE_EO_PARTIAL_BUFFER_FLY32						0
+	MOVDQA XMM1, [E                          ]
+	MOVDQA XMM2, XMM1
+	MOVDQA XMM0, [E+8*SIZE_OF_INT16_T        ]
+	PSHUFB XMM0, [pshuffb_reverse_7_0_int16_t]
+	PADDW XMM1, XMM0
+	PSUBW XMM2, XMM0
+	MOVDQA [EE], XMM1
+	MOVDQA [EO], XMM2
+%endmacro
+
+%macro			CALCULATE_EEE_EEO_PARTIAL_BUFFER_FLY32						0
+	MOVDQA XMM0, XMM1
+	MOVDQA XMM2, XMM1
+	PSHUFB XMM2, [pshuffb_reverse_7_0_int16_t]
+	PADDW XMM0, XMM2
+	PSUBW XMM1, XMM2
+	MOVQ [EEE], XMM0
+	MOVQ [EEO], XMM1
+%endmacro
+
+%macro			CALCULATE_EEEE_EEEO_PARTIAL_BUFFER_FLY32				0
+	MOVDQA XMM2, XMM0
+	MOVDQA XMM1, XMM0
+	PSHUFB XMM1, [pshuffb_reverse_3_0_int16_t]
+	PADDW XMM0, XMM1
+	PSUBW XMM2, XMM1
+	MOVD [EEEE], XMM0
+	MOVD [EEEO], XMM2
+%endmacro
+
+%macro			CALCULATE_DST_8_1_PARTIAL_BUFFER_FLY32					0
+	PUNPCKLDQ XMM0, XMM0
+	PUNPCKLDQ XMM2, XMM2
+	MOVLHPS XMM0, XMM2
+
+	PMADDWD XMM0, [partial_buffer_fly32_dst_8_1_t32]
+	PADDD XMM0, XADD
+	PSRAD XMM0, XSHIFT
+
+	MOVD r0, XMM0
+	MOV [DST], ax
+	PSRLDQ XMM0, 4
+	MOVD r0, XMM0
+	MOV [DST+LINE_LENGTH*16*SIZE_OF_INT16_T], ax
+	PSRLDQ XMM0, 4
+	MOVD r0, XMM0
+	MOV [DST+LINE_LENGTH* 8*SIZE_OF_INT16_T], ax
+	PSRLDQ XMM0, 4
+	MOVD r0, XMM0
+	MOV [DST+LINE_LENGTH*24*SIZE_OF_INT16_T], ax
+	PSRLDQ XMM0, 4
+%endmacro
+
+%macro			CALCULATE_DST_8_2_PARTIAL_BUFFER_FLY32					0
+	MOVQ XMM0, [EEO]
+	MOVLHPS XMM0, XMM0
+	MOVDQA XMM2, XMM0
+	PMADDWD XMM0, [partial_buffer_fly32_dst_8_2_t32]
+	MOVDQA XMM1, XMM0
+	PSRLDQ XMM1, 4
+	PADDD XMM0, XMM1
+	PADDD XMM0, XADD
+	PSRAD XMM0, XSHIFT
+	MOVD r0, XMM0
+	MOV [DST+LINE_LENGTH* 4*SIZE_OF_INT16_T], ax
+	PSRLDQ XMM0, 8
+	MOVD r0, XMM0
+	MOV [DST+LINE_LENGTH*12*SIZE_OF_INT16_T], ax
+
+	PMADDWD XMM2, [partial_buffer_fly32_dst_8_2_t32+16]
+	MOVDQA XMM1, XMM2
+	PSRLDQ XMM1, 4
+	PADDD XMM2, XMM1
+	PADDD XMM2, XADD
+	PSRAD XMM2, XSHIFT
+	MOVD r0, XMM2
+	MOV [DST+LINE_LENGTH*20*SIZE_OF_INT16_T], ax
+	PSRLDQ XMM2, 8
+	MOVD r0, XMM2
+	MOV [DST+LINE_LENGTH*28*SIZE_OF_INT16_T], ax
+%endmacro
+
+%macro			CALCULATE_DST_4_PARTIAL_BUFFER_FLY32					0
+	MOV K, LINE_LENGTH*2*SIZE_OF_INT16_T
+	MOVDQA XMM2, [EO]
+
+%%CALCULATE_DST_4_PARTIAL_BUFFER_FLY32_K:
+	MOVDQA XMM0, XMM2
+	PMADDWD XMM0, [partial_buffer_fly32_t32+K]
+	MOVHLPS XMM1, XMM0
+	PADDD XMM0, XMM1
+	MOVDQA XMM1, XMM0
+	PSRLDQ XMM1, 4
+	PADDD XMM0, XMM1
+
+	MOVD r0, XMM0
+	add r0, ADD
+	SAR r0, cl
+	MOV [DST+K], ax
+	add K, LINE_LENGTH* 4*SIZE_OF_INT16_T
+	CMP K, LINE_LENGTH*32*SIZE_OF_INT16_T
+	JL %%CALCULATE_DST_4_PARTIAL_BUFFER_FLY32_K
+%endmacro
+
+%macro			CALCULATE_DST_2_PARTIAL_BUFFER_FLY32					0
+	MOV K, LINE_LENGTH*1*SIZE_OF_INT16_T
+	MOVDQA XMM2, [O]
+	MOVDQA XMM3, [O+16]
+
+%%CALCULATE_DST_2_PARTIAL_BUFFER_FLY32_K:
+	MOVDQA XMM0, XMM2
+	PMADDWD XMM0, [partial_buffer_fly32_t32+K]
+	MOVDQA XMM1, XMM3
+	PMADDWD XMM1, [partial_buffer_fly32_t32+K+16]
+	PADDD XMM0, XMM1
+	MOVHLPS XMM1, XMM0
+	PADDD XMM0, XMM1
+	MOVDQA XMM1, XMM0
+	PSRLDQ XMM1, 4
+	PADDD XMM0, XMM1
+
+	MOVD r0, XMM0
+	add r0, ADD
+	SAR r0, cl
+	MOV [DST+K], ax
+	add K, LINE_LENGTH* 2*SIZE_OF_INT16_T
+	CMP K, LINE_LENGTH*32*SIZE_OF_INT16_T
+	JL %%CALCULATE_DST_2_PARTIAL_BUFFER_FLY32_K
+%endmacro
+
+
+%macro			CALCULATE_ONE_LINE_DST_PARTIAL_BUFFER_FLY32				0
+	MOV SRC, LINE_LENGTH * SIZE_OF_INT16_T
+	IMUL SRC, J
+	add SRC, r0m
+
+	CALCULATE_E_O_PARTIAL_BUFFER_FLY32
+	CALCULATE_EE_EO_PARTIAL_BUFFER_FLY32
+	CALCULATE_EEE_EEO_PARTIAL_BUFFER_FLY32
+	CALCULATE_EEEE_EEEO_PARTIAL_BUFFER_FLY32
+
+	MOV DST, SIZE_OF_INT16_T
+	IMUL DST, J
+	add DST, r1m
+	CALCULATE_DST_8_1_PARTIAL_BUFFER_FLY32
+	CALCULATE_DST_8_2_PARTIAL_BUFFER_FLY32
+	CALCULATE_DST_4_PARTIAL_BUFFER_FLY32
+	CALCULATE_DST_2_PARTIAL_BUFFER_FLY32
+%endmacro
+
+
+%macro			CALCULATE_ONE_LINE_DST_DCT32				0
+	MOV SRC, LINE_LENGTH * SIZE_OF_INT16_T
+	IMUL SRC, J
+	add SRC, r0m
+
+	LDDQU XMM1, [SRC                   ]
+	LDDQU XMM2, [SRC+ 8*SIZE_OF_INT16_T]
+	LDDQU XMM3, [SRC+ 16*SIZE_OF_INT16_T]
+	LDDQU XMM4, [SRC+ 24*SIZE_OF_INT16_T]
+
+
+	MOV DST, SIZE_OF_INT16_T
+	IMUL DST, J
+	add DST, r1m
+
+
+	MOV K, 0
+%%CALCULATE_ONE_LINE_DST_DCT32_K:
+	MOVDQA XMM0, XMM1
+	PMADDWD XMM0, [partial_buffer_fly32_t32+K]
+	MOVDQA XMM7, XMM2
+	PMADDWD XMM7, [partial_buffer_fly32_t32+K+16]
+	PADDD XMM0, XMM7
+	MOVDQA XMM7, XMM3
+	PMADDWD XMM7, [partial_buffer_fly32_t32+K+32]
+	PADDD XMM0, XMM7
+	MOVDQA XMM7, XMM4
+	PMADDWD XMM7, [partial_buffer_fly32_t32+K+48]
+	PADDD XMM0, XMM7
+	MOVHLPS XMM7, XMM0
+	PADDD XMM0, XMM7
+	MOVDQA XMM7, XMM0
+	PSRLDQ XMM7, 4
+	PADDD XMM0, XMM7
+
+	MOVD r0, XMM0
+	add r0, ADD
+	SAR r0, cl
+	MOV [DST+K], ax
+	add K, LINE_LENGTH*   SIZE_OF_INT16_T
+	CMP K, LINE_LENGTH*32*SIZE_OF_INT16_T
+	JL %%CALCULATE_ONE_LINE_DST_DCT32_K
+
+
+%endmacro
+
+cglobal partial_butterfly32, 0, 7
+	%define				SIZE_OF_ONE_EO				 4
+	%define				SIZE_OF_INT16_T				 2
+	%define				NUM_OF_E_O					16
+	%define				NUM_OF_EE_EO				 8
+	%define				NUM_OF_EEE_EEO				 4
+	%define				NUM_OF_EEEE_EEEO			 4
+	%define				NUM_OF_ALL_E_O				((NUM_OF_E_O+NUM_OF_EE_EO+NUM_OF_EEE_EEO+NUM_OF_EEEE_EEEO)*2)
+	%define				SIZE_OF_ALL_E_O				(NUM_OF_ALL_E_O*SIZE_OF_ONE_EO)
+
+	%define				SIZE_OF_E					(NUM_OF_E_O*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_O					(NUM_OF_E_O*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_E_O					(SIZE_OF_E+SIZE_OF_O)
+	%define				SIZE_OF_EE					(NUM_OF_EE_EO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EO					(NUM_OF_EE_EO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EE_EO				(SIZE_OF_EE+SIZE_OF_EO)
+	%define				SIZE_OF_EEE					(NUM_OF_EEE_EEO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EEO					(NUM_OF_EEE_EEO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EEE_EEO				(SIZE_OF_EEE+SIZE_OF_EEO)
+	%define				SIZE_OF_EEEE				(NUM_OF_EEEE_EEEO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EEEO				(NUM_OF_EEEE_EEEO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EEEE_EEEO			(SIZE_OF_EEEE+SIZE_OF_EEEO)
+
+	%define				E							r2
+	%define				EE							E+SIZE_OF_E_O
+	%define				EEE							EE+SIZE_OF_EE_EO
+	%define				EEEE						EEE+SIZE_OF_EEE_EEO
+	%define				O							E+SIZE_OF_E
+	%define				EO							EE+SIZE_OF_EE
+	%define				EEO							EEE+SIZE_OF_EEE
+	%define				EEEO						EEEE+SIZE_OF_EEEE
+
+	%define				J							r6
+	%define				K							r5
+	%define				SHIFT						r1
+	%define				ADD							r3
+	%define				SRC							r4
+	%define				DST							r4
+
+	%define				XADD						XMM6
+	%define				XSHIFT						XMM5
+	%define				LINE_LENGTH					32
+
+
+	mov r2, esp
+	and r2, 0xFFFFFFF0
+	sub r2, SIZE_OF_ALL_E_O
+
+
+	MOV J, 0
+
+	MOV ADD, 1
+	MOV SHIFT, r2m
+	DEC ecx
+	SHL ADD, cl
+
+	MOV SHIFT, r2m
+	MOVD XADD, ADD
+	PSHUFB XADD, [pshuffd_zero]
+
+	MOVD XSHIFT, SHIFT
+	PSHUFB XSHIFT, [pshuffq_zero]
+
+
+
+x265_partial_butter_fly32_j:
+	CALCULATE_ONE_LINE_DST_DCT32
+	add J, 1
+	CMP J, 32
+	JL x265_partial_butter_fly32_j
+
+
+
+	RET
+
+%undef		LINE_LENGTH
+%undef		ADD
+
+
+%macro MUL_AND_ADD_ONE_LINE_NUM_PARTIAL_BUFFER_FLY_INVERSE32		1
+
+
+%endmacro
+
+%macro			CALCULATE_FOUR_O_PARTIAL_BUFFER_FLY_INVERSE32		1
+	PXOR XMM1, 0
+
+
+%endmacro
+
+%macro			CALCULATE_O_PARTIAL_BUFFER_FLY_INVERSE32			0
+
+%endmacro
+
+%macro			CALCULATE_ONE_LINE_DST_PARTIAL_BUFFER_FLY_INVERSE32			2
+	MOV SRC, SIZE_OF_INT16_T
+	IMUL SRC, J
+	ADD SRC, %1
+
+	CALCULATE_O_PARTIAL_BUFFER_FLY_INVERSE32
+
+	MOV DST, LINE_LENGTH * SIZE_OF_INT16_T
+	IMUL DST, J
+	ADD DST, %2
+
+%endmacro
+
+cglobal partial_butterfly_inverse32, 0, 7
+	%define				SIZE_OF_ONE_EO				 4
+	%define				SIZE_OF_INT16_T				 2
+	%define				NUM_OF_E_O					16
+	%define				NUM_OF_EE_EO				 8
+	%define				NUM_OF_EEE_EEO				 4
+	%define				NUM_OF_EEEE_EEEO			 4
+	%define				NUM_OF_ALL_E_O				((NUM_OF_E_O+NUM_OF_EE_EO+NUM_OF_EEE_EEO+NUM_OF_EEEE_EEEO)*2)
+	%define				SIZE_OF_ALL_E_O				(NUM_OF_ALL_E_O*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_E					(NUM_OF_E_O*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_O					(NUM_OF_E_O*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_E_O					(SIZE_OF_E+SIZE_OF_O)
+	%define				SIZE_OF_EE					(NUM_OF_EE_EO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EO					(NUM_OF_EE_EO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EE_EO				(SIZE_OF_EE+SIZE_OF_EO)
+	%define				SIZE_OF_EEE					(NUM_OF_EEE_EEO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EEO					(NUM_OF_EEE_EEO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EEE_EEO				(SIZE_OF_EEE+SIZE_OF_EEO)
+	%define				SIZE_OF_EEEE				(NUM_OF_EEEE_EEEO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EEEO				(NUM_OF_EEEE_EEEO*SIZE_OF_ONE_EO)
+	%define				SIZE_OF_EEEE_EEEO			(SIZE_OF_EEEE+SIZE_OF_EEEO)
+
+	%define				E							r2
+	%define				EE							E+SIZE_OF_E_O
+	%define				EEE							EE+SIZE_OF_EE_EO
+	%define				EEEE						EEE+SIZE_OF_EEE_EEO
+	%define				O							E+SIZE_OF_E
+	%define				EO							EE+SIZE_OF_EE
+	%define				EEO							EEE+SIZE_OF_EEE
+	%define				EEEO						EEEE+SIZE_OF_EEEE
+
+	%define				J							r6
+	%define				K							r5
+	%define				SHIFT						r1
+	%define				OFFSET							r3
+	%define				SRC							r4
+	%define				DST							r4
+
+	%define				XOFFSET						XMM6
+	%define				XSHIFT						XMM5
+	%define				LINE_LENGTH					32
+	%define				LINE_SIZE_INT16_T			(LINE_LENGTH*SIZE_OF_INT16_T)
+
+
+	mov r2, esp
+	and r2, 0xFFFFFFF0
+	sub r2, SIZE_OF_ALL_E_O
+
+
+	MOV J, 0
+	MOV OFFSET, 1
+	MOV SHIFT, r2m
+	DEC ecx
+	SHL OFFSET, cl
+
+	MOV SHIFT, r2m
+	MOVD XOFFSET, OFFSET
+	PSHUFB XOFFSET, [pshuffd_zero]
+
+	MOVD XSHIFT, SHIFT
+	PSHUFB XSHIFT, [pshuffq_zero]
+
+
+
+x265_partial_butterfly_inverse32_j:
+
+	CALCULATE_ONE_LINE_DST_PARTIAL_BUFFER_FLY_INVERSE32 r0m, r1m
+
+	add J, 1
+	CMP J, 32
+	JL x265_partial_butterfly_inverse32_j
+
+
+
+	RET
+
+%undef		LINE_LENGTH
+
+
+
+0-3
+0-7
+
+1-4
+1-7
+
+2-5
+2-7
+
+3-6
+3-7
+
+4-7
+4-11
+
+5-8
+5-11
+
+6-9
+6-11
+
+7-11
+7-11
+
+0-3
+0-7
+
+1-4
+1-7
+
+2-5
+0-7
+
+3-7
+3-7
+
+8-11
+

@@ -1,0 +1,64 @@
+sed 's/T\(.*\)::T\1()/x265_\1t *x265_\1new()/g' $1 |
+sed 's/T\(.*\)::~T\1(/void x265_\1delete(x265_\1t *p\1/g' |
+sed 's/T\(.*\) *::\(.*\)(/x265_\1\2(x265_\1t *p\1, /g' |
+sed 's/TCom\(.*\)\*/x265_\1T\*/g' |
+sed 's/TCom\(.*\)\([\(]\)/x265_\1T\2/g' |
+sed 's/TCom\(.*\) \([a-z]\)/x265_\1T \2/g' |
+sed 's/TEnc\(.*\)\*\*\*/x265_enc_\1T***/g' |
+sed 's/TEnc\(.*\)\*\*/x265_enc_\1T**/g' |
+sed 's/TEnc\(.*\)\*/x265_enc_\1T*/g' |
+sed 's/UInt64/uint64_t/g' |
+sed 's/UInt/uint32_t/g' |
+sed 's/UChar/uint8_t/g' |
+sed 's/Int64/int32_t/g' |
+sed 's/Int/int32_t/g' |
+sed 's/Char/int8_t/g' |
+sed 's/Double/double/g' |
+sed 's/Short/short/g' |
+sed 's/Bool /int32_t b_/g' |
+sed 's/Void/void/g' |
+sed 's/\([a-z][a-z]*\)\([A-Z][a-z]*\)\([A-Z]*[a-z]*\)\([A-Z]*[a-z]*\)\([A-Z]*[a-z]*\)\([A-Z]*[a-z]*\)\([A-Z]*[a-z]*\)\([A-Z]*[a-z]*\)\([A-Z]*[a-z]*\)/\1_\2_\3_\4_\5_\6_\7_\8_\9/g' |
+# removing the tail "_"s
+sed 's/\([a-z][a-z]*_[A-Z][a-z]*\(_[A-Z][A-Z]*[a-z]*\)*\)\(_*\)/\1/g' |
+# to lowercase
+sed 'y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/' |
+# macro to uppercase
+sed '/#if */ y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/' |
+sed 's/#IF/#if/g' |
+sed 's/#if /#if X265_/g' |
+sed 's/#if X265_X265_/#if X265_/g' |
+sed 's/x265_enc_entropy/x265_enc_entropy_/g' |
+sed 's/ *__inline *//g' |
+sed 's/delete \[\] \(.*\);/x265_free ( \1 ) ;/g' |
+sed 's/delete\[\] \(.*\);/x265_free ( \1 ) ;/g' |
+sed 's/q_tt/qt_t/g' |
+sed 's/null/NULL/g' |
+sed 's/m_ppc/p_enc_entropy->pp/g' |
+sed 's/m_pc_/p_enc_entropy->/g' |
+sed 's/m_p_/p_enc_entropy->/g' |
+sed 's/m_i/p_enc_entropy->i/g' |
+sed 's/m_puh_/p_enc_entropy->/g' |
+sed 's/p_enc_entropy/enc_entropy/g' |
+sed 's/ *\(.*\) *= *new *\(.*\) *\[\(.*\)\]/\tCHECKED_MALLOCZERO(\1, \3*sizeof(\2))/g'
+
+#sed '/#define */ y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/'
+#sed 's/#DEFINE/#define/g' |
+#sed 's/#IFNDEF/#ifndef/g' |
+# add X265_ to #define
+#sed 's/#define /#define X265_/g' |
+#sed 's/#define X265_X265_/#define X265_/g' |
+#sed 's/#if /#if X265_/g' |
+#sed 's/#if X265_X265_/#if X265_/g'
+#sed 's/TCom\(.*\) \([A-Z|a-z]\)/x265\1_t \2/g' |
+#sed 's/TCom\(.*\)(/x265\1_t(/g' |
+#sed 's/q_t/qt/g' |
+#sed 's/t_u/tu/g' |
+#sed 's/m_ppc/p_enc_entropy->pp/g' |
+#sed 's/m_pc_/p_enc_entropy->/g' |
+#sed 's/m_p_/p_enc_entropy->/g' |
+#sed 's/m_i/p_enc_entropy->i/g' |
+#sed 's/m_puh_/p_enc_entropy->/g' |
+#sed 's/_int/int32_t/g' |
+#sed 's/delete \[\] \(.*\);/x265_free ( \1 ) ;/g' |
+#sed 's/delete\[\] \(.*\);/x265_free ( \1 ) ;/g' |
+#sed 's/_n_u_l_l/NULL/g'

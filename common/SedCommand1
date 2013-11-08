@@ -1,0 +1,2 @@
+sed 's/int32_t /fprintf ( file, "\%d\\n", (uint32_t)\&((x265_rd_cost_weight_prediction_t*)0)->/g' $1 |
+sed 's/;/) ;/g'

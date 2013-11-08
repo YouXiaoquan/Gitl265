@@ -1,0 +1,16 @@
+sed 's/::/_/g' $1 |
+sed 's/UInt/uint32_t/g' |
+sed 's/Int/int32_t/g' |
+sed 's/[A-Z]/_\l&/g' |
+sed 's/_c_h_e_c_k_e_d__m_a_l_l_o_c_z_e_r_o/CHECKED_MALLOCZERO/g' |
+sed 's/_pel/pixel/g' |
+sed 's/_n_u_l_l/NULL/g' |
+sed 's/_dist_param/x265_dist_param_t/g' |
+sed 's/p_org/org/g' |
+sed 's/p_cur/cur/g' |
+sed 's/pc_dt_param/dist_param/g' |
+sed 's/wp_scaling_param/x265_wp_scaling_param_t/g' |
+sed 's/ui_/i_/g' |
+sed 's/bit_depth/i_bit_depth/g' |
+sed 's/_d_i_s_t_o_r_t_i_o_n__p_r_e_c_i_s_i_o_n__a_d_j_u_s_t_m_e_n_t/X265_DISTORTION_PRECISION_ADJUSTMENT/g' |
+sed 's/wcur/wp_scaling_param/g'

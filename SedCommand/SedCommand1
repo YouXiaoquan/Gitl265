@@ -1,0 +1,1 @@
+sed 's/cu->get_\(.*\)(/x265_base_data_cu_get_\1_pn((x265_base_data_cu_t*)cu, /g' $1

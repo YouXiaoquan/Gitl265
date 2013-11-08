@@ -1,0 +1,1 @@
+find "/mnt/D/UbuntuLinux/liaozixinhao/EclipseProject/x265" -name "*.c*" -exec grep X265_DISABLING_CLIP_FOR_BIPREDME {} \; -print 2>/dev/null

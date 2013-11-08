@@ -1,0 +1,48 @@
+#!/bin/bash
+
+define() {
+    echo "#define "$1" 1" >> config.h
+}
+
+
+UNAME_MACHINE=`(uname -m) 2>/dev/null` || UNAME_MACHINE=unknown
+UNAME_RELEASE=`(uname -r) 2>/dev/null` || UNAME_RELEASE=unknown
+UNAME_SYSTEM=`(uname -s) 2>/dev/null`  || UNAME_SYSTEM=unknown
+UNAME_VERSION=`(uname -v) 2>/dev/null` || UNAME_VERSION=unknown
+
+case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
+    *:MINGW*:*)
+	host=${UNAME_MACHINE}-pc-mingw32;;
+	i*86:Linux:*:*)
+	LIBC=gnu
+	host=${UNAME_MACHINE}-pc-linux-${LIBC};;
+esac
+
+
+host="${host#*-}"
+host_os="${host#*-}"
+
+echo "// Configure File !" > config.h
+
+case $host_os in
+    *linux*)
+		echo "// Configure File !" > config.h
+		echo "#define HAVE_MALLOC_H 1" >> config.h
+		echo "#define HAVE_MMX 1" >> config.h
+		echo "#define ARCH_X86 1" >> config.h
+		echo "#define SYS_LINUX 1" >> config.h
+		echo "#define HAVE_POSIXTHREAD 1" >> config.h
+        ;;
+    mingw*)
+		echo "// Configure File !" > config.h
+		echo "#define HAVE_MALLOC_H 0" >> config.h
+		echo "#define HAVE_MMX 1" >> config.h
+		echo "#define ARCH_X86 1" >> config.h
+		echo "#define SYS_WINDOWS 1" >> config.h
+		echo "#define HAVE_POSIXTHREAD 1" >> config.h
+        ;;
+esac
+
+
+echo "You can run 'make' now."
+
