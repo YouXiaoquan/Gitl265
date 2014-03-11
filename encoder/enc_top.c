@@ -89,7 +89,7 @@ int create_wpp_coders ( x265_t *h, int32_t i_num_substreams )
     					i_num_substreams * sizeof(x265_rd_cost_t*) );
 	for ( loop = 0 ; loop < i_num_substreams ; ++ loop )
 	{
-		h->rd_costs[loop] = x265_rd_cost_new () ;
+		h->rd_costs[loop] = x265_rd_cost_new (h->param.cpu) ;
 		if ( NULL == h->rd_costs[loop] )
 		{
 			goto fail ;
@@ -199,7 +199,7 @@ int x265_enc_top_init ( x265_t *h, x265_param_t *param )
 	{
 		goto fail ;
 	}
-	if ( x265_rd_cost_init ( &h->rd_cost ) )
+	if ( x265_rd_cost_init ( &h->rd_cost, h->param.cpu ) )
 	{
 		goto fail ;
 	}

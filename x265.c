@@ -12,8 +12,11 @@
 #include "bitstream_output/bitstream_output.h"
 #include "common/x86/mb8_x86.h"
 
-
-
+#if SYS_LINUX
+#include <sys/time.h>
+#else
+#include <windows.h>
+#endif
 
 #define FAIL_IF_ERROR( cond, ... ) FAIL_IF_ERR( cond, "x265", __VA_ARGS__ )
 #ifdef _WIN32
@@ -135,8 +138,51 @@ void a()
 	}
 }
 
+
+#if SYS_LINUX
+#else
+double CalculateDifferent(ULARGE_INTEGER *pFileTime1, ULARGE_INTEGER *pFileTime2)
+{
+	double fDifferentFileTime = 0.0 ;
+	ULARGE_INTEGER iDifferentFileTime ;
+
+	iDifferentFileTime.QuadPart = pFileTime1->QuadPart - pFileTime2->QuadPart ;
+	fDifferentFileTime = (double) iDifferentFileTime.QuadPart ;
+
+	fDifferentFileTime = fDifferentFileTime / 10.0 ;
+	return fDifferentFileTime ;
+}
+
+void GetCurrentFileTime(ULARGE_INTEGER *pFileTime)
+{
+	SYSTEMTIME sSystemTime ;
+	FILETIME fFileTime ;
+
+	GetSystemTime(&sSystemTime) ;
+	SystemTimeToFileTime(&sSystemTime, &fFileTime) ;
+	memcpy(pFileTime, &fFileTime, sizeof(ULARGE_INTEGER)) ;
+}
+#endif
+
+void PrintAll(int i_start, int i_width)
+{
+	printf("satd_func[%d] = x265_pixel_hads_%dx4_##extent ; \\\n", i_start + 0, i_width) ;
+	printf("satd_func[%d] = x265_pixel_hads_%dx8_##extent ; \\\n", i_start + 1, i_width) ;
+	printf("satd_func[%d] = x265_pixel_hads_%dx12_##extent ; \\\n", i_start + 2, i_width) ;
+	printf("satd_func[%d] = x265_pixel_hads_%dx16_##extent ; \\\n", i_start + 3, i_width) ;
+	printf("satd_func[%d] = x265_pixel_hads_%dx24_##extent ; \\\n", i_start + 4, i_width) ;
+	printf("satd_func[%d] = x265_pixel_hads_%dx32_##extent ; \\\n", i_start + 5, i_width) ;
+	printf("satd_func[%d] = x265_pixel_hads_%dx48_##extent ; \\\n", i_start + 6, i_width) ;
+	printf("satd_func[%d] = x265_pixel_hads_%dx64_##extent ; \\\n", i_start + 7, i_width) ;
+}
+
 int main( int argc, char **argv )
 {
+#if SYS_LINUX
+
+#else
+	FILE *file ;
+#endif
 	/*
 	int offset = 119951 - (416 * 240);
 	int x = offset % 208 ;
@@ -191,15 +237,50 @@ int main( int argc, char **argv )
     /* Control-C handler */
     signal( SIGINT, sigint_handler );
 
+
+#if SYS_LINUX
+    struct timeval start ;
+    struct timeval end ;
+    double fStart ;
+    double fEnd ;
+
     double dResult;
-    long lBefore = clock();
+
+    gettimeofday(&start, NULL) ;
+    fStart = start.tv_sec ;
+    fStart = fStart * 1000000.0 ;
+    fStart = fStart + start.tv_usec ;
+#else
+    ULARGE_INTEGER fStartFileTime ;
+    ULARGE_INTEGER fEndFileTime ;
+    double fDifferentFileTime ;
+
+    GetCurrentFileTime(&fStartFileTime) ;
+#endif
 
     if( !ret )
     {
     	ret = encode( &param, &opt );
     }
-    dResult = (double)(clock()-lBefore) / CLOCKS_PER_SEC;
+
+#if SYS_LINUX
+    gettimeofday(&end, NULL) ;
+	fEnd = end.tv_sec ;
+	fEnd = fEnd * 1000000.0 ;
+	fEnd = fEnd + end.tv_usec ;
+	dResult = (fEnd - fStart) / 1000000.0 ;
     printf("\n Total Time: %12.3f sec.\n", dResult);
+#else
+    GetCurrentFileTime(&fEndFileTime) ;
+    fDifferentFileTime = CalculateDifferent(&fEndFileTime, &fStartFileTime) ;
+    fDifferentFileTime = fDifferentFileTime / 1000.0 ;
+    fDifferentFileTime = fDifferentFileTime / 1000.0 ;
+
+    printf("\n Total Time: %12.3f sec.\n", fDifferentFileTime);
+    file = fopen("Time2.txt", "wb") ;
+    fprintf(file, "Total Time: %12.3f sec.\r\n", fDifferentFileTime);
+    fclose(file) ;
+#endif
 
     if( input_filter.free )
     {

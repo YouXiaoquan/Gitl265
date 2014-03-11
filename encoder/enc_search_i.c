@@ -3185,6 +3185,7 @@ void x265_enc_search_preest_chroma_pred_mode ( x265_t *h,
 	uint32_t i_min_sad = 0;
 	uint32_t i_mode  = 0;
 	uint32_t i_sad = 0;
+	int32_t i_partition = 0 ;
 
 
 	i_width = x265_data_cu_get_width_p2(cu,  0 ) >> 1;
@@ -3246,22 +3247,15 @@ void x265_enc_search_preest_chroma_pred_mode ( x265_t *h,
 											b_left_avail );
 
 		//--- get sad ---
-		i_sad = x265_rd_cost_calc_had(&h->rd_cost,
-										h->cu.pic.i_bit_depth_c,
-										p_org_u,
-										i_stride,
-										p_pred_u,
-										i_stride,
-										i_width,
-										i_height );
-		i_sad += x265_rd_cost_calc_had(&h->rd_cost,
-										h->cu.pic.i_bit_depth_c,
-										p_org_v,
-										i_stride,
-										p_pred_v,
-										i_stride,
-										i_width,
-										i_height );
+		i_partition = PartitionFromSizes(i_width, i_height) ;
+		i_sad = h->rd_cost.satd.satd_func[i_partition](p_pred_u,
+														i_stride,
+														p_org_u,
+														i_stride);
+		i_sad += h->rd_cost.satd.satd_func[i_partition](p_pred_v,
+														i_stride,
+														p_org_v,
+														i_stride);
 		//--- check ---
 		if( i_sad < i_min_sad )
 		{
@@ -3368,6 +3362,7 @@ void x265_enc_search_est_intra_pred_qt ( x265_t *h,
 	double f_pu_cost = 0.0;
 	double f_best_pu_cost = 0;
 	double cand_cost_list[ X265_FAST_UDI_MAX_RDMODE_NUM ];
+	int32_t i_partition = 0 ;
 
 
 	i_depth = x265_base_data_cu_get_depth_p2((x265_base_data_cu_t*)cu, 0);
@@ -3452,14 +3447,11 @@ void x265_enc_search_est_intra_pred_qt ( x265_t *h,
 													b_left_avail );
 
 				// use hadamard transform here
-				i_sad = x265_rd_cost_calc_had(&h->rd_cost,
-												h->cu.pic.i_bit_depth_y,
-												p_org,
-												i_stride,
-												p_pred,
-												i_stride,
-												i_width,
-												i_height );
+				i_partition = PartitionFromSizes(i_width, i_height) ;
+				i_sad = h->rd_cost.satd.satd_func[i_partition](p_pred,
+																i_stride,
+																p_org,
+																i_stride);
 				//	print_int_state (i_sad) ;
 
 				i_mode_bits = x265_enc_search_x_mode_bits_intra(h,

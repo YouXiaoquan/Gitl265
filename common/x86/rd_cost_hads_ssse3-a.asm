@@ -282,11 +282,11 @@ cglobal %1, 0, 7
 	ADD r0, r1
 
 	ADD J, 4
-	CMP J, %3
+	CMP J, %2
 	JL %%PIXEL_HADS_4x4_HELP_SSSE3_J
 
 	ADD I, 4
-	CMP I, %2
+	CMP I, %3
 	JL %%PIXEL_HADS_4x4_HELP_SSSE3_I
 
 	RET
@@ -334,11 +334,11 @@ cglobal %1, 0, 7
 	ADD r0, r1
 
 	ADD J, 8
-	CMP J, %3
+	CMP J, %2
 	JL %%PIXEL_HADS_8x8_HELP_SSSE3_J
 
 	ADD I, 8
-	CMP I, %2
+	CMP I, %3
 	JL %%PIXEL_HADS_8x8_HELP_SSSE3_I
 
 	RET
@@ -346,7 +346,71 @@ cglobal %1, 0, 7
 
 
 PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_4x4_ssse3,    4,  4
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_4x8_ssse3,    4,  8
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_4x12_ssse3,   4, 12
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_4x16_ssse3,   4, 16
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_4x24_ssse3,   4, 24
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_4x32_ssse3,   4, 32
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_4x48_ssse3,   4, 48
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_4x64_ssse3,   4, 64
+
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_8x4_ssse3,    8,  4
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_8x8_ssse3,    8,  8
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_8x12_ssse3,   8, 12
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_8x16_ssse3,   8, 16
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_8x24_ssse3,   8, 24
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_8x32_ssse3,   8, 32
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_8x48_ssse3,   8, 48
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_8x64_ssse3,   8, 64
+
+
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_12x4_ssse3,  12,  4
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_12x8_ssse3,  12,  8
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_12x12_ssse3, 12, 12
 PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_12x16_ssse3, 12, 16
-PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_8x8_ssse3  ,  8,  8
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_12x24_ssse3, 12, 24
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_12x32_ssse3, 12, 32
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_12x48_ssse3, 12, 48
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_12x64_ssse3, 12, 64
+
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_16x4_ssse3,  16,  4
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_16x8_ssse3,  16,  8
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_16x12_ssse3, 16, 12
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_16x16_ssse3, 16, 16
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_16x24_ssse3, 16, 24
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_16x32_ssse3, 16, 32
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_16x48_ssse3, 16, 48
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_16x64_ssse3, 16, 64
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_24x4_ssse3,  24,  4
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_24x8_ssse3,  24,  8
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_24x12_ssse3, 24, 12
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_24x16_ssse3, 24, 16
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_24x24_ssse3, 24, 24
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_24x32_ssse3, 24, 32
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_24x48_ssse3, 24, 48
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_24x64_ssse3, 24, 64
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_32x4_ssse3,  32,  4
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_32x8_ssse3,  32,  8
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_32x12_ssse3, 32, 12
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_32x16_ssse3, 32, 16
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_32x24_ssse3, 32, 24
 PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_32x32_ssse3, 32, 32
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_32x48_ssse3, 32, 48
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_32x64_ssse3, 32, 64
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_48x4_ssse3,  48,  4
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_48x8_ssse3,  48,  8
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_48x12_ssse3, 48, 12
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_48x16_ssse3, 48, 16
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_48x24_ssse3, 48, 24
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_48x32_ssse3, 48, 32
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_48x48_ssse3, 48, 48
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_48x64_ssse3, 48, 64
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_64x4_ssse3,  64,  4
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_64x8_ssse3,  64,  8
+PIXEL_HADS_4x4_HELP_SSSE3 pixel_hads_64x12_ssse3, 64, 12
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_64x16_ssse3, 64, 16
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_64x24_ssse3, 64, 24
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_64x32_ssse3, 64, 32
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_64x48_ssse3, 64, 48
+PIXEL_HADS_8x8_HELP_SSSE3 pixel_hads_64x64_ssse3, 64, 64
 

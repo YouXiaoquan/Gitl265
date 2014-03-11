@@ -16,13 +16,16 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 	i*86:Linux:*:*)
 	LIBC=gnu
 	host=${UNAME_MACHINE}-pc-linux-${LIBC};;
+	x86_64:Linux:*:*)
+	LIBC=gnu
+	host=${UNAME_MACHINE}-pc-linux-${LIBC};;
 esac
 
 
 host="${host#*-}"
 host_os="${host#*-}"
 
-echo "// Configure File !" > config.h
+#echo "// Configure File !" > config.h
 
 case $host_os in
     *linux*)
@@ -32,6 +35,28 @@ case $host_os in
 		echo "#define ARCH_X86 1" >> config.h
 		echo "#define SYS_LINUX 1" >> config.h
 		echo "#define HAVE_POSIXTHREAD 1" >> config.h
+		echo "SRCPATH=." > config.mak
+		echo "ARCH=X86" >> config.mak
+		echo "SYS=LINUX" >> config.mak
+		echo "CC=gcc" >> config.mak
+		echo "CFLAGS= -Wshadow -DHIGH_BIT_DEPTH=0 -O3 -ffloat-store -m32 -Wuninitialized -Wall -I. -I\$(SRCPATH) -march=i686 -mfpmath=sse -msse -std=gnu99 -fno-tree-vectorize" >> config.mak
+		echo "DEPMM=-MM" >> config.mak
+		echo "DEPMT=-MT" >> config.mak
+		echo "LD=gcc -o " >> config.mak
+		echo "LDFLAGS = -m32 -lm -lpthread" >> config.mak
+		echo "LIBX265=libx265.a" >> config.mak
+		echo "AR=ar rc " >> config.mak
+		echo "RANLIB=ranlib" >> config.mak
+		echo "STRIP=strip" >> config.mak
+		echo "AS=yasm" >> config.mak
+		echo "ASFLAGS= DWARF2 -f elf -DHIGH_BIT_DEPTH=0 -DBIT_DEPTH=8" >> config.mak
+		echo "RC=" >> config.mak
+		echo "RCFLAGS=" >> config.mak
+		echo "EXE=" >> config.mak
+		echo "" >> config.mak
+		echo "default: cli" >> config.mak
+		echo "install: install-cli" >> config.mak
+		echo "CLI_LIBX265 = \$(LIBX265)" >> config.mak
         ;;
     mingw*)
 		echo "// Configure File !" > config.h
@@ -40,6 +65,28 @@ case $host_os in
 		echo "#define ARCH_X86 1" >> config.h
 		echo "#define SYS_WINDOWS 1" >> config.h
 		echo "#define HAVE_POSIXTHREAD 1" >> config.h
+		echo "SRCPATH=." > config.mak
+		echo "ARCH=X86" >> config.mak
+		echo "SYS=LINUX" >> config.mak
+		echo "CC=gcc" >> config.mak
+		echo 'CFLAGS= -Wshadow -DHIGH_BIT_DEPTH=0 -O3 -ffloat-store -Wuninitialized -Wall -I. -I$(SRCPATH) -march=i686 -mfpmath=sse -msse -std=gnu99 -fno-tree-vectorize' >> config.mak
+		echo "DEPMM=-MM" >> config.mak
+		echo "DEPMT=-MT" >> config.mak
+		echo "LD=gcc -o" >> config.mak
+		echo "LDFLAGS = -m32 -lm -lpthread" >> config.mak
+		echo "LIBX265=libx265.a" >> config.mak
+		echo "AR=ar rc " >> config.mak
+		echo "RANLIB=ranlib" >> config.mak
+		echo "STRIP=strip" >> config.mak
+		echo "AS=yasm" >> config.mak
+		echo "ASFLAGS= DWARF2 -f win32 -DPREFIX -DHIGH_BIT_DEPTH=0 -DBIT_DEPTH=8" >> config.mak
+		echo "RC=" >> config.mak
+		echo "RCFLAGS=" >> config.mak
+		echo "EXE=" >> config.mak
+		echo "" >> config.mak
+		echo "default: cli" >> config.mak
+		echo "install: install-cli" >> config.mak
+		echo 'CLI_LIBX265 = $(LIBX265)' >> config.mak
         ;;
 esac
 

@@ -4,22 +4,85 @@
 #ifndef X265_RD_COST_HADS_X86_H
 #define X265_RD_COST_HADS_X86_H
 
-uint32_t x265_pixel_hads_4x4_ssse3(pixel *cur,
-									uint32_t i_stride_cur,
-									pixel *org,
-									uint32_t i_stride_org )	;
+#define DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(i_rows, i_cols, extent) \
+uint32_t x265_pixel_hads_##i_rows##x##i_cols##_##extent(pixel *cur, \
+											uint32_t i_stride_cur, \
+											pixel *org, \
+											uint32_t i_stride_org ) ;
+#define DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(i_rows, i_cols, extent) \
+uint32_t x265_pixel_hads_##i_rows##x##i_cols##_##extent(pixel *cur, \
+											uint32_t i_stride_cur, \
+											pixel *org, \
+											uint32_t i_stride_org )	;
 
-uint32_t x265_pixel_hads_8x8_ssse3(pixel *cur,
-									uint32_t i_stride_cur,
-									pixel *org,
-									uint32_t i_stride_org )	;
-uint32_t x265_pixel_hads_32x32_ssse3(pixel *cur,
-									uint32_t i_stride_cur,
-									pixel *org,
-									uint32_t i_stride_org )	;
+#define DECLARE_ALL_PIXEL_N_HADS_4x4_FUNCTION(extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 4,  4, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 4,  8, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 4, 12, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 4, 16, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 4, 24, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 4, 32, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 4, 48, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 4, 64, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 8,  4, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION( 8,  8, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION( 8, 12, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION( 8, 16, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION( 8, 24, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION( 8, 32, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION( 8, 48, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION( 8, 64, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(12,  4, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(12,  8, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(12, 12, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(12, 16, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(12, 24, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(12, 32, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(12, 48, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(12, 64, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(16,  4, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(16,  8, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(16, 12, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(16, 16, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(16, 24, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(16, 32, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(16, 48, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(16, 64, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(24,  4, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(24,  8, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(24, 12, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(24, 16, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(24, 24, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(24, 32, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(24, 48, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(24, 64, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(32,  4, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(32,  8, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(32, 12, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(32, 16, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(32, 24, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(32, 32, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(32, 48, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(32, 64, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(48,  4, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(48,  8, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(48, 12, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(48, 16, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(48, 24, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(48, 32, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(48, 48, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(48, 64, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(64,  4, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(64,  8, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_4x4_FUNCTION(64, 12, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(64, 16, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(64, 24, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(64, 32, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(64, 48, extent) \
+	DECLARE_ONE_PIXEL_N_HADS_8x8_FUNCTION(64, 64, extent) \
 
 
-
+DECLARE_ALL_PIXEL_N_HADS_4x4_FUNCTION(ssse3)
 
 
 

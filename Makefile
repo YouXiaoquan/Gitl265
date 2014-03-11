@@ -14,7 +14,8 @@ default:
 SRCS = common/common.c common/list.c common/scan.c common/mv.c common/cpu.c \
 	   common/pattern.c common/bitstream.c common/set.c common/pic_sym.c \
 	   common/simage.c common/image.c common/frame.c common/mc.c common/slice.c \
-	   common/rd_cost_weight_prediction.c common/rd_cost.c \
+	   common/rd_cost_weight_prediction.c \
+	   common/satd.c common/rd_cost.c \
 	   common/transform.c common/tr_quant.c \
 	   common/rate_dist_opt_quant_ssse3.c \
 	   common/loop_filter.c \
@@ -129,7 +130,8 @@ clean:
 	rm -f $(OBJS) $(OBJASM) $(OBJCLI) $(OBJSO) $(SONAME) *.a *.lib *.exp *.pdb x265 x265.exe .depend TAGS
 	rm -f checkasm checkasm.exe $(OBJCHK)
 	rm -f $(SRC2:%.c=%.gcda) $(SRC2:%.c=%.gcno) *.dyn pgopti.dpi pgopti.dpi.lock
-	#rm -f config.h
+	rm -f config.h
+	rm -f config.mak
 	
 
 	
