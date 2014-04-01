@@ -4,11 +4,13 @@
 #ifndef X265_RD_COST_WEIGHT_PREDICTION_H
 #define X265_RD_COST_WEIGHT_PREDICTION_H
 
-
-
+/** \file     rd_cost_weight_prediction.h
+    \brief    RD cost computation classes (header)
+*/
 
 typedef struct _x265_rd_cost_weight_prediction_t x265_rd_cost_weight_prediction_t ;
 
+/// RD cost computation class, with Weighted Prediction
 struct _x265_rd_cost_weight_prediction_t
 {
 	int32_t i_w0 ;
@@ -18,7 +20,6 @@ struct _x265_rd_cost_weight_prediction_t
 	int32_t i_round ;
 	int32_t b_x_set_done ;
 } ;
-
 
 typedef struct
 {

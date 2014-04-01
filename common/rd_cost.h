@@ -12,6 +12,8 @@ typedef struct _x265_dist_param_t x265_dist_param_t ;
 typedef uint32_t (*x265_fp_dist_func) ( x265_rd_cost_t *rd_cost, x265_dist_param_t* dist_param) ;
 
 #include "rd_cost_weight_prediction.h"
+#include "sad.h"
+#include "sse.h"
 #include "satd.h"
 
 typedef struct _x265_dist_param_t
@@ -50,12 +52,6 @@ struct _x265_rd_cost_t
 	int32_t i_blk_width ;
 	int32_t i_blk_height ;
 
-#if X265_AMP_SAD
-	x265_fp_dist_func fp_distort_func[64] ; // [d_func]
-#else
-	x265_fp_dist_func fp_distort_func[33] ; // [d_func]
-#endif
-
 #if X265_WEIGHTED_CHROMA_DISTORTION
 	double f_cb_distortion_weight ;
 	double f_cr_distortion_weight ;
@@ -81,9 +77,12 @@ struct _x265_rd_cost_t
 	int32_t i_search_limit ;
 #endif
 
-
-
-	x265_satd_t satd ;
+	x265_sads_func sads_func[64] ;
+	x265_sads_func sads_half_func[64] ;
+	x265_satd_func satd_func[64] ;
+	x265_sses_p_p_func sse_p_p_func[64] ;
+	x265_sses_p_s_func sse_p_s_func[64] ;
+	x265_sses_s_s_func sse_s_s_func[64] ;
 } ;
 
 x265_dist_param_t *x265_dist_param_new () ;
@@ -93,7 +92,7 @@ void x265_dist_param_deinit ( x265_dist_param_t *dist_param ) ;
 
 x265_rd_cost_t *x265_rd_cost_new (int cpu) ;
 void x265_rd_cost_delete ( x265_rd_cost_t *rd_cost ) ;
-int x265_rd_cost_init ( x265_rd_cost_t *rd_cost, int cpu) ;
+int x265_rd_cost_init ( x265_rd_cost_t *rd_cost, int cpu ) ;
 void x265_rd_cost_deinit ( x265_rd_cost_t *rd_cost ) ;
 
 
@@ -102,10 +101,6 @@ void x265_rd_cost_get_motion_cost(x265_rd_cost_t *rd_cost,
 									int32_t i_add ) ;
 
 void rd_cost_set_lambda( x265_rd_cost_t *rd_cost, double f_ambda ) ;
-
-void print_rd_cost_offset () ;
-
-
 
 void x265_rd_cost_set_predictor( x265_rd_cost_t *rd_cost, x265_mv_t *mv ) ;
 uint32_t x265_rd_cost_get_cost_p2 ( x265_rd_cost_t *rd_cost, uint32_t i_bit ) ;
@@ -117,121 +112,5 @@ double x265_rd_cost_calc_rd_cost64( x265_rd_cost_t *rd_cost, uint64_t i_bits, ui
 void rd_cost_init_rate_distortion_model( x265_rd_cost_t *rd_cost, int32_t i_sub_pel_search_limit ) ;
 #endif
 uint32_t rd_cost_x_get_component_bits( x265_rd_cost_t *rd_cost, int32_t i_val ) ;
-//	6
-void x265_rd_cost_set_dist_param_p6_1( x265_t *h,
-									x265_rd_cost_t *rd_cost,
-									uint32_t i_blk_width,
-									uint32_t i_blk_height,
-									enum d_func_e d_func,
-									x265_dist_param_t* dist_param ) ;
-//	6
-void x265_rd_cost_set_dist_param_p6_2( x265_t *h,
-									x265_rd_cost_t *rd_cost,
-									x265_pattern_t* pattern_key,
-									pixel* p_ref_y,
-									int32_t i_ref_stride,
-									x265_dist_param_t *dist_param ) ;
-
-#if X265_NS_HAD
-//	9
-void x265_rd_cost_set_dist_param_p9 ( x265_t *h,
-									x265_rd_cost_t *rd_cost,
-									x265_pattern_t* pattern_key,
-									pixel* p_ref_y,
-									int32_t i_ref_stride,
-									int32_t i_step,
-									x265_dist_param_t *dist_param,
-									int32_t b_use_ns_had ) ;
-//	11
-void x265_rd_cost_set_dist_param_p11( x265_t *h,
-									x265_rd_cost_t *rd_cost,
-									x265_dist_param_t* dist_param,
-									pixel* p1,
-									int32_t i_stride_1,
-									pixel* p2,
-									int32_t i_stride_2,
-									int32_t i_width,
-									int32_t i_height,
-									int32_t b_use_ns_had ) ;
-#else
-//	8
-void x265_rd_cost_set_dist_param_p8( x265_t *h,
-									x265_rd_cost_t *rd_cost,
-									x265_pattern_t* pattern_key,
-									pixel* p_ref_y,
-									int32_t i_ref_stride,
-									int32_t i_step,
-									x265_dist_param_t *dist_param) ;
-//	11
-void x265_rd_cost_set_dist_param_p11( x265_t *h,
-									x265_rd_cost_t *rd_cost,
-									x265_dist_param_t *dist_param,
-									int32_t i_bit_depth,
-									pixel* p1,
-									int32_t i_stride_1,
-									pixel* p2,
-									int32_t i_stride_2,
-									int32_t i_width,
-									int32_t i_height) ;
-#endif
-
-
-#if X265_WEIGHTED_CHROMA_DISTORTION
-uint32_t x265_rd_cost_get_dist_part(x265_t *h, x265_rd_cost_t *rd_cost, int32_t i_bit_depth, pixel* cur, int32_t i_cur_stride,  pixel* org, int32_t i_org_stride, uint32_t i_blk_width, uint32_t i_blk_height, enum text_type_e e_text, enum d_func_e d_func) ;
-#else
-uint32_t x265_rd_cost_get_dist_part(x265_t *h, x265_rd_cost_t *rd_cost, int32_t i_bit_depth, pixel* cur, int32_t i_cur_stride,  pixel* org, int32_t i_org_stride, uint32_t i_blk_width, uint32_t i_blk_height, enum d_func_e d_func ) ;
-#endif
-
-#if X265_WEIGHTED_CHROMA_DISTORTION
-uint32_t x265_rd_cost_get_sse_s_s(x265_t *h, x265_rd_cost_t *rd_cost, int32_t i_bit_depth, spixel* cur, int32_t i_cur_stride,  spixel* org, int32_t i_org_stride, uint32_t i_blk_width, uint32_t i_blk_height, enum text_type_e e_text, enum d_func_e d_func) ;
-#else
-uint32_t x265_rd_cost_get_sse_s_s(x265_t *h, x265_rd_cost_t *rd_cost, int32_t i_bit_depth, spixel* cur, int32_t i_cur_stride,  spixel* org, int32_t i_org_stride, uint32_t i_blk_width, uint32_t i_blk_height, enum d_func_e d_func ) ;
-#endif
-
-#if X265_WEIGHTED_CHROMA_DISTORTION
-uint32_t x265_rd_cost_get_sse_p_s(x265_t *h, x265_rd_cost_t *rd_cost, int32_t i_bit_depth, pixel* cur, int32_t i_cur_stride,  spixel* org, int32_t i_org_stride, uint32_t i_blk_width, uint32_t i_blk_height, enum text_type_e e_text, enum d_func_e d_func) ;
-#else
-uint32_t x265_rd_cost_get_sse_p_s(x265_t *h, x265_rd_cost_t *rd_cost, int32_t i_bit_depth, pixel* cur, int32_t i_cur_stride,  spixel* org, int32_t i_org_stride, uint32_t i_blk_width, uint32_t i_blk_height, enum d_func_e d_func ) ;
-#endif
-
-#if X265_RATE_CONTROL_LAMBDA_DOMAIN
-uint32_t x265_rd_cost_get_sad_part(x265_rd_cost_t *rd_cost,
-									int32_t i_bit_depth,
-									pixel* cur,
-									int32_t cur_stride,
-									pixel* org,
-									int32_t org_stride,
-									uint32_t width,
-									uint32_t height ) ;
-#endif
-
-
-
-
-uint32_t x265_rd_cost_x_get_sad( x265_rd_cost_t *rd_cost, x265_dist_param_t* dist_param) ;
-uint32_t x265_rd_cost_x_get_sad4( x265_rd_cost_t *rd_cost,  x265_dist_param_t* dist_param ) ;
-uint32_t x265_rd_cost_x_get_sad8( x265_rd_cost_t *rd_cost,  x265_dist_param_t* dist_param ) ;
-uint32_t x265_rd_cost_x_get_sad16( x265_rd_cost_t *rd_cost,  x265_dist_param_t* dist_param ) ;
-#if X265_AMP_SAD
-uint32_t x265_rd_cost_x_get_sad12( x265_rd_cost_t *rd_cost,  x265_dist_param_t* dist_param ) ;
-#endif
-uint32_t x265_rd_cost_x_get_sad16N( x265_rd_cost_t *rd_cost,  x265_dist_param_t* dist_param ) ;
-uint32_t x265_rd_cost_x_get_sad32( x265_rd_cost_t *rd_cost,  x265_dist_param_t* dist_param ) ;
-#if X265_AMP_SAD
-uint32_t x265_rd_cost_x_get_sad24( x265_rd_cost_t *rd_cost,  x265_dist_param_t* dist_param ) ;
-#endif
-uint32_t x265_rd_cost_x_get_sad64( x265_rd_cost_t *rd_cost,  x265_dist_param_t* dist_param ) ;
-#if X265_AMP_SAD
-uint32_t x265_rd_cost_x_get_sad48( x265_rd_cost_t *rd_cost, x265_dist_param_t* dist_param ) ;
-#endif
-uint32_t x265_rd_cost_x_get_sse( x265_rd_cost_t *rd_cost, x265_dist_param_t* x265_dt_param ) ;
-uint32_t x265_rd_cost_x_get_sse4( x265_rd_cost_t *rd_cost, x265_dist_param_t* x265_dt_param ) ;
-uint32_t x265_rd_cost_x_get_sse8( x265_rd_cost_t *rd_cost, x265_dist_param_t* x265_dt_param ) ;
-uint32_t x265_rd_cost_x_get_sse16( x265_rd_cost_t *rd_cost, x265_dist_param_t* x265_dt_param ) ;
-uint32_t x265_rd_cost_x_get_sse16N( x265_rd_cost_t *rd_cost, x265_dist_param_t* x265_dt_param ) ;
-uint32_t x265_rd_cost_x_get_sse32( x265_rd_cost_t *rd_cost, x265_dist_param_t* x265_dt_param ) ;
-uint32_t x265_rd_cost_x_get_sse64( x265_rd_cost_t *rd_cost, x265_dist_param_t* x265_dt_param ) ;
-
-
 
 #endif

@@ -3,10 +3,18 @@
 #ifndef X265_BASE_DATA_CU_H
 #define X265_BASE_DATA_CU_H
 
-
+/** \file     base_data_cu.h
+    \brief    CU data structure (header)
+    \todo     not all entities are documented
+*/
 
 extern const uint8_t convert_txt_type_to_idx [4] ;
 
+// ====================================================================================================================
+// Non-deblocking in-loop filter processing block data structure
+// ====================================================================================================================
+
+/// Non-deblocking filter processing block border tag
 enum ndbf_block_border_tag_t
 {
 	SGU_L = 0,
@@ -20,6 +28,7 @@ enum ndbf_block_border_tag_t
 	NUM_SGU_BORDER
 } ;
 
+/// Non-deblocking filter processing block information
 struct _x265_ndbf_block_info_t
 {
 	int32_t i_tile_id ;

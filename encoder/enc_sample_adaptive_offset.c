@@ -2,7 +2,10 @@
 
 #include "common/common.h"
 
-
+/**
+ \file     enc_sample_adaptive_offset.c
+ \brief       estimation part of sample adaptive offset class
+ */
 
 void x265_enc_sample_adaptive_offset_set_max_num_offsets_per_pic(x265_enc_sample_adaptive_offset_t *enc_sample_adaptive_offset,
 																int32_t i_val)
@@ -100,7 +103,9 @@ double x265_enc_sample_adaptive_offset_x_round_ibdi2(int32_t bit_depth, double x
 	return ((x)>0) ? (int32_t)(((int32_t)(x)+(1<<(bit_depth-8-1)))/(1<<(bit_depth-8))) : ((int32_t)(((int32_t)(x)-(1<<(bit_depth-8-1)))/(1<<(bit_depth-8))));
 }
 
-
+/** rounding with IBDI
+ * \param  x
+ */
 double x265_enc_sample_adaptive_offset_x_round_ibdi(int32_t bit_depth, double x)
 {
 	return (bit_depth > 8 ? x265_enc_sample_adaptive_offset_x_round_ibdi2(bit_depth, (x))
@@ -108,7 +113,9 @@ double x265_enc_sample_adaptive_offset_x_round_ibdi(int32_t bit_depth, double x)
 										: ((int32_t)((x)-0.5)))) ;
 }
 
-
+/** create Encoder Buffer for SAO
+ * \param
+ */
 int x265_enc_sample_adaptive_offset_create_enc_buffer ( x265_t *h, x265_enc_sample_adaptive_offset_t *enc_sample_adaptive_offset )
 {
 	int32_t i = 0, j = 0 ;
@@ -239,6 +246,8 @@ fail:
 
 }
 
+/** delete allocated memory of enc_sample_adaptive_offset class.
+ */
 void x265_enc_sample_adaptive_offset_destroy_enc_buffer ( x265_t *h, x265_enc_sample_adaptive_offset_t *enc_sample_adaptive_offset )
 {
 	int32_t loop = 0;
@@ -424,7 +433,9 @@ void x265_enc_sample_adaptive_offset_destroy_enc_buffer ( x265_t *h, x265_enc_sa
 	enc_sample_adaptive_offset->dist_org = NULL ;
 }
 
-
+/** Start SAO encoder
+ * \param enc_sample_adaptive_offset
+ */
 void x265_enc_sample_adaptive_offset_start_sao_enc ( x265_t *h, x265_enc_sample_adaptive_offset_t *enc_sample_adaptive_offset )
 {
 	int32_t i_depth = 0 ;
@@ -488,7 +499,8 @@ void x265_enc_sample_adaptive_offset_start_sao_enc ( x265_t *h, x265_enc_sample_
 
 }
 
-
+/** End SAO encoder
+ */
 void x265_enc_sample_adaptive_offset_end_sao_enc ( x265_t *h, x265_enc_sample_adaptive_offset_t *enc_sample_adaptive_offset )
 {
 
@@ -1318,6 +1330,9 @@ void x265_enc_sample_adaptive_offset_calc_sao_stats_cu_before_dblk(x265_t *h,
 //	dump_rec_data( i_cu_addr, 0, 0 ) ;
 }
 
+/** reset offset statistics
+ * \param
+ */
 void x265_enc_sample_adaptive_offset_reset_stats(x265_enc_sample_adaptive_offset_t *enc_sample_adaptive_offset)
 {
 	int32_t i = 0, j = 0, k = 0 ;

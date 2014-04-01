@@ -19,6 +19,11 @@ global partial_bufferfly_inverse_8_t8
 global partial_bufferfly_8_t8_1
 global partial_bufferfly_8_t8_2
 
+global partial_bufferfly_4_t4
+global partial_bufferfly_inverse_4_t4
+global partial_bufferfly_4_t4_1
+global partial_bufferfly_4_t4_2
+
 SECTION .rodata align=16
 
 partial_bufferfly_32_t32			DW			 64,  64,  64,  64,  64,  64,  64,  64
@@ -2554,3 +2559,30 @@ partial_bufferfly_8_t8_2			DW			 64,  64,  64,  64,  64,  64,  64,  64
 									DW			 75, -89,  75, -89,  75, -89,  75, -89
 									DW			 89, -75,  89, -75,  89, -75,  89, -75
 									DW			 50, -18,  50, -18,  50, -18,  50, -18
+
+partial_bufferfly_4_t4				DW			 64,  64,  64,  64,  64,  64,  64,  64
+									DW			 83,  36, -36, -83,  83,  36, -36, -83,
+									DW			 64, -64, -64,  64,  64, -64, -64,  64
+									DW			 36, -83,  83, -36,  36, -83,  83, -36
+
+partial_bufferfly_inverse_4_t4		DW			 64,  64,  64,  64,  64,  64,  64,  64
+									DW			 64, -64,  64, -64,  64, -64,  64, -64
+									DW			 83,  36,  83,  36,  83,  36,  83,  36
+									DW			 36, -83,  36, -83,  36, -83,  36, -83
+
+partial_bufferfly_4_t4_1			DW			 64,  64,  64,  64,  64,  64,  64,  64
+									DW			 83,  36,  83,  36,  83,  36,  83,  36
+									DW			 64, -64,  64, -64,  64, -64,  64, -64
+									DW			 36, -83,  36, -83,  36, -83,  36, -83
+
+partial_bufferfly_4_t4_2			DW			 64,  64,  64,  64,  64,  64,  64,  64
+									DW			 64,  64,  64,  64,  64,  64,  64,  64
+									DW			 83,  36,  83,  36,  83,  36,  83,  36
+									DW			-36, -83, -36, -83, -36, -83, -36, -83
+									DW			 64, -64,  64, -64,  64, -64,  64, -64
+									DW			-64,  64, -64,  64, -64,  64, -64,  64
+									DW			 36, -83,  36, -83,  36, -83,  36, -83
+									DW			 83, -36,  83, -36,  83, -36,  83, -36
+
+
+

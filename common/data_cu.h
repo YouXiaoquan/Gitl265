@@ -3,6 +3,10 @@
 #ifndef X265_DATA_CU_H
 #define X265_DATA_CU_H
 
+/** \file     data_cu.h
+    \brief    CU data structure (header)
+    \todo     not all entities are documented
+*/
 
 
 struct _x265_data_cu_t
@@ -103,7 +107,7 @@ void x265_data_cu_class_static_deinit () ;
 
 #endif
 
-
+/// add possible motion vector predictor candidates
 int32_t x265_data_cu_x_add_mvp_cand( x265_t *h,
 									x265_data_cu_t* cu,
 									x265_amvp_info_t* p_amp_info,
@@ -382,9 +386,12 @@ void x265_data_cu_set_chrom_intra_dir_sub_parts ( x265_t *h,
 												uint32_t i_abs_part_idx,
 												uint32_t i_depth ) ;
 
+/// get slice ID for SU
 int32_t x265_data_cu_get_su_slice_id ( x265_data_cu_t* cu,
 										uint32_t i_idx ) ;
+/// get the pointer of slice ID map
 int32_t *x265_data_cu_get_slice_su_map( x265_data_cu_t* cu ) ;
+/// set the pointer of slice ID map
 void x265_data_cu_set_slice_su_map( x265_data_cu_t* cu, int32_t *slice_su_map ) ;
 
 

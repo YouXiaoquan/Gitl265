@@ -6,6 +6,11 @@
 
 
 #include "intra_pred.h"
+#include "ip.h"
+
+/** \file     prediction.h
+    \brief    prediction class (header)
+*/
 
 typedef struct
 {
@@ -17,13 +22,13 @@ typedef struct
 	int32_t i_image_ext_height;
 
 	x265_image_t image_pred[2];
-	x265_simage_t simage_pred[2];
-	x265_simage_t image_temp_cand;
+	x265_short_image_t short_image_pred[2];
+	x265_short_image_t image_temp_cand;
 	x265_image_t image_pred_temp;
 	x265_image_t filtered_block[4][4];
-	x265_simage_t filtered_block_tmp[4];
+	x265_short_image_t filtered_block_tmp[4];
 
-	x265_interpolation_filter_t interpolation_filter;
+	x265_ip_t ip;
 
 	pixel* luma_rec_buffer;       ///< array for downsampled reconstructed luma sample
 	int32_t i_luma_rec_stride;       ///< stride of #m_pLumaRecBuffer array
@@ -47,6 +52,8 @@ void x265_prediction_x_pred_intra_planar(x265_t* h,
 										int32_t i_dst_stride,
 										uint32_t i_width,
 										uint32_t i_height ) ;
+
+// motion compensation functions
 void x265_prediction_x_pred_inter_uni_p ( x265_t *h,
 										x265_prediction_t* prediction,
 										x265_data_cu_t *cu,
@@ -63,7 +70,7 @@ void x265_prediction_x_pred_inter_uni_s ( x265_t *h,
 										int32_t i_width,
 										int32_t i_height,
 										enum ref_pic_list_e i_ref_pic_list,
-										x265_simage_t **pp_simage_pred,
+										x265_short_image_t **pp_short_image_pred,
 										int32_t b_bi ) ;
 void x265_prediction_x_pred_inter_bi ( x265_t *h,
 										x265_prediction_t* prediction,
@@ -90,7 +97,7 @@ void x265_prediction_x_pred_inter_luma_blk_s( x265_t *h,
 											x265_mv_t *mv,
 											int32_t i_width,
 											int32_t i_height,
-											x265_simage_t **pp_dst_simage,
+											x265_short_image_t **pp_dst_short_image,
 											int32_t b_bi ) ;
 void x265_prediction_x_pred_inter_chroma_blk_p(x265_t *h,
 											x265_prediction_t* prediction,
@@ -110,11 +117,11 @@ void x265_prediction_x_pred_inter_chroma_blk_s(x265_t *h,
 											x265_mv_t *mv,
 											int32_t i_width,
 											int32_t i_height,
-											x265_simage_t **pp_dst_simage,
+											x265_short_image_t **pp_dst_short_image,
 											int32_t b_bi ) ;
 void x265_prediction_x_weighted_average( x265_t *h,
-										x265_simage_t* p_simage_src0,
-										x265_simage_t* p_simage_src1,
+										x265_short_image_t* p_short_image_src0,
+										x265_short_image_t* p_short_image_src1,
 										int32_t i_ref_idx0,
 										int32_t i_ref_idx1,
 										uint32_t i_part_idx,
@@ -140,6 +147,7 @@ void x265_prediction_deinit ( x265_prediction_t *prediction );
 int x265_prediction_init_temp_buff( x265_t *h, x265_prediction_t *prediction ) ;
 void x265_prediction_deinit_temp_buff( x265_prediction_t *prediction ) ;
 
+// inter
 void x265_prediction_motion_compensation(x265_t *h,
 										x265_prediction_t* prediction,
 										x265_data_cu_t *cu,
@@ -147,6 +155,7 @@ void x265_prediction_motion_compensation(x265_t *h,
 										enum ref_pic_list_e i_ref_pic_list,
 										int32_t i_part_idx ) ;
 
+// Angular Intra
 void x265_prediction_pred_intra_luma_ang( x265_t* h,
 										x265_prediction_t* prediction,
 										x265_pattern_t* pattern,

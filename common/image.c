@@ -556,18 +556,18 @@ void x265_image_copy_part_to_part_chroma_p7( x265_t *h, x265_image_t *image, x26
 	}
 }
 
-void x265_image_add_clip( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_simage_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size )
+void x265_image_add_clip( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_short_image_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size )
 {
 	x265_image_add_clip_luma   ( h, image, image_src0, image_src1, i_tr_unit_idx, i_part_size     );
 	x265_image_add_clip_chroma ( h, image, image_src0, image_src1, i_tr_unit_idx, i_part_size>>1  );
 }
 
-void x265_image_add_clip_luma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_simage_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size )
+void x265_image_add_clip_luma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_short_image_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size )
 {
 	int32_t x, y;
 
 	pixel* p_src0 = x265_image_get_luma_addr_p4 ( h, image_src0, i_tr_unit_idx, i_part_size );
-	spixel* p_src1 = x265_simage_get_luma_addr_p4 ( h, image_src1, i_tr_unit_idx, i_part_size );
+	short_pixel* p_src1 = x265_short_image_get_luma_addr_p4 ( h, image_src1, i_tr_unit_idx, i_part_size );
 	pixel* p_dst  = x265_image_get_luma_addr_p4 ( h, image, i_tr_unit_idx, i_part_size );
 
 	uint32_t i_src0stride = image_src0->i_stride[0];
@@ -585,14 +585,14 @@ void x265_image_add_clip_luma( x265_t *h, x265_image_t *image, x265_image_t* ima
 	}
 }
 
-void x265_image_add_clip_chroma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_simage_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size )
+void x265_image_add_clip_chroma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_short_image_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size )
 {
 	int32_t x, y;
 
 	pixel* p_src_u0 = x265_image_get_cb_addr_p4 ( h, image_src0, i_tr_unit_idx, i_part_size );
-	spixel* p_src_u1 = x265_simage_get_cb_addr_p4 ( h, image_src1, i_tr_unit_idx, i_part_size );
+	short_pixel* p_src_u1 = x265_short_image_get_cb_addr_p4 ( h, image_src1, i_tr_unit_idx, i_part_size );
 	pixel* p_src_v0 = x265_image_get_cr_addr_p4 ( h, image_src0, i_tr_unit_idx, i_part_size );
-	spixel* p_src_v1 = x265_simage_get_cr_addr_p4 ( h, image_src1, i_tr_unit_idx, i_part_size );
+	short_pixel* p_src_v1 = x265_short_image_get_cr_addr_p4 ( h, image_src1, i_tr_unit_idx, i_part_size );
 	pixel* p_dst_u = x265_image_get_cb_addr_p4 ( h, image, i_tr_unit_idx, i_part_size );
 	pixel* p_dst_v = x265_image_get_cr_addr_p4 ( h, image, i_tr_unit_idx, i_part_size );
 
@@ -675,17 +675,17 @@ void x265_image_subtract_chroma( x265_t *h, x265_image_t *image, x265_image_t* i
 	}
 }
 
-void x265_image_add_avg( x265_t *h, x265_image_t *image, x265_simage_t* image_src0, x265_simage_t* image_src1, uint32_t i_part_unit_idx, uint32_t i_width, uint32_t i_height )
+void x265_image_add_avg( x265_t *h, x265_image_t *image, x265_short_image_t* image_src0, x265_short_image_t* image_src1, uint32_t i_part_unit_idx, uint32_t i_width, uint32_t i_height )
 {
 	int32_t x, y;
 
-	spixel* p_src_y0  = x265_simage_get_luma_addr_p3 ( h, image_src0, i_part_unit_idx );
-	spixel* p_src_u0  = x265_simage_get_cb_addr_p3 ( h, image_src0, i_part_unit_idx );
-	spixel* p_src_v0  = x265_simage_get_cr_addr_p3 ( h, image_src0, i_part_unit_idx );
+	short_pixel* p_src_y0  = x265_short_image_get_luma_addr_p3 ( h, image_src0, i_part_unit_idx );
+	short_pixel* p_src_u0  = x265_short_image_get_cb_addr_p3 ( h, image_src0, i_part_unit_idx );
+	short_pixel* p_src_v0  = x265_short_image_get_cr_addr_p3 ( h, image_src0, i_part_unit_idx );
 
-	spixel* p_src_y1  = x265_simage_get_luma_addr_p3 ( h, image_src1,  i_part_unit_idx );
-	spixel* p_src_u1  = x265_simage_get_cb_addr_p3 ( h, image_src1, i_part_unit_idx );
-	spixel* p_src_v1  = x265_simage_get_cr_addr_p3 ( h, image_src1, i_part_unit_idx );
+	short_pixel* p_src_y1  = x265_short_image_get_luma_addr_p3 ( h, image_src1,  i_part_unit_idx );
+	short_pixel* p_src_u1  = x265_short_image_get_cb_addr_p3 ( h, image_src1, i_part_unit_idx );
+	short_pixel* p_src_v1  = x265_short_image_get_cr_addr_p3 ( h, image_src1, i_part_unit_idx );
 
 	pixel* p_dst_y   = x265_image_get_luma_addr_p3 ( h, image, i_part_unit_idx );
 	pixel* p_dst_u   = x265_image_get_cb_addr_p3 ( h, image, i_part_unit_idx );

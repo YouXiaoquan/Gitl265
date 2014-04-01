@@ -3,6 +3,7 @@
 #ifndef X265_TMVP_DATA_CU_H
 #define X265_TMVP_DATA_CU_H
 
+/// class for motion information in one CU
 typedef struct
 {
 	x265_mv_t* mv ;

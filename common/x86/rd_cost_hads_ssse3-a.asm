@@ -22,22 +22,46 @@ mul_coeff_one					DW		 1,  1,  1,  1,  1,  1,  1,  1
 
 %macro LOAD_DIFF_SSSE3 5
 	MOV r1, r1m
+%if 2 == SIZE_OF_PIXEL
+	ADD r1, r1
+%endif
 	IMUL r1, %4
+
+%if 1 == SIZE_OF_PIXEL
 %if 8 == %5
 	MOVQ %2, [cur+r1]
 %elif 4 == %5
 	MOVD %2, [cur+r1]
 %endif
 	PUNPCKLBW %2, %3
+%else
+%if 8 == %5
+	MOVDQU %2, [cur+r1]
+%elif 4 == %5
+	MOVQ %2, [cur+r1]
+%endif
+%endif
 
 	MOV r1, r3m
+%if 2 == SIZE_OF_PIXEL
+	ADD r1, r1
+%endif
 	IMUL r1, %4
+
+%if 1 == SIZE_OF_PIXEL
 %if 8 == %5
 	MOVQ %1, [org+r1]
 %elif 4 == %5
 	MOVD %1, [org+r1]
 %endif
 	PUNPCKLBW %1, %3
+%else
+%if 8 == %5
+	MOVDQU %1, [org+r1]
+%elif 4 == %5
+	MOVQ %1, [org+r1]
+%endif
+%endif
 
 	PSUBW %1, %2
 %endmacro
@@ -267,15 +291,27 @@ cglobal %1, 0, 7
 %%PIXEL_HADS_4x4_HELP_SSSE3_J:
 	MOV cur, r0m
 	MOV r1, r1m
+%if 2 == SIZE_OF_PIXEL
+	ADD r1, r1
+%endif
 	IMUL r1, I
 	ADD cur, r1
 	ADD cur, J
+%if 2 == SIZE_OF_PIXEL
+	ADD cur, J
+%endif
 
 	MOV org, r2m
 	MOV r1, r3m
+%if 2 == SIZE_OF_PIXEL
+	ADD r1, r1
+%endif
 	IMUL r1, I
 	ADD org, r1
 	ADD org, J
+%if 2 == SIZE_OF_PIXEL
+	ADD org, J
+%endif
 
 	PIXEL_HADS_SSSE3 4
 
@@ -320,15 +356,27 @@ cglobal %1, 0, 7
 %%PIXEL_HADS_8x8_HELP_SSSE3_J:
 	MOV cur, r0m
 	MOV r1, r1m
+%if 2 == SIZE_OF_PIXEL
+	ADD r1, r1
+%endif
 	IMUL r1, I
 	ADD cur, r1
 	ADD cur, J
+%if 2 == SIZE_OF_PIXEL
+	ADD cur, J
+%endif
 
 	MOV org, r2m
 	MOV r1, r3m
+%if 2 == SIZE_OF_PIXEL
+	ADD r1, r1
+%endif
 	IMUL r1, I
 	ADD org, r1
 	ADD org, J
+%if 2 == SIZE_OF_PIXEL
+	ADD org, J
+%endif
 
 	PIXEL_HADS_SSSE3 8
 	ADD r0, r1

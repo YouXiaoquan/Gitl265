@@ -45,9 +45,9 @@ void x265_tr_quant_x_rate_dist_opt_quant_ssse3 (x265_t *h,
 	int32_t i_scaling_list_type = 0 ;
 	int32_t *p_q_coef_org = NULL;
 	int32_t *p_q_coef = NULL;
-#if X265_ADAPTIVE_QP_SELECTION
+//	#if X265_ADAPTIVE_QP_SELECTION
 	int32_t i_q_bits_c = 0;
-#endif
+//	#endif
 	uint32_t i_scan_idx = 0;
 	int32_t delta_u      [ 32 * 32 ];
 	uint32_t *scan_cg = NULL;

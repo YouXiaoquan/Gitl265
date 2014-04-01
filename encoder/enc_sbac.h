@@ -3,6 +3,10 @@
 #ifndef X265_ENCODER_SBAC_H
 #define X265_ENCODER_SBAC_H
 
+/** \file     enc_sbac.h
+    \brief    Context-adaptive entropy encoder class (header)
+*/
+
 typedef struct
 {
 	X265_ENC_ENTROPY_IF_FUNC ;
@@ -206,6 +210,9 @@ void x265_enc_sbac_code_transform_skip_flags(x265_t* h,
 											uint32_t height,
 											enum text_type_e i_text_type ) ;
 
+// -------------------------------------------------------------------------------------------------------------------
+// for RD-optimizatioon
+// -------------------------------------------------------------------------------------------------------------------
 
 void x265_enc_sbac_est_bit( x265_t *h,
 							x265_enc_entropy_if_t *enc_entropy_if,

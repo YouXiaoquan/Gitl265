@@ -4,6 +4,11 @@
 #ifndef X265_ENCODER_SAMPLE_ADAPTIVE_OFFSET_H
 #define X265_ENCODER_SAMPLE_ADAPTIVE_OFFSET_H
 
+/**
+ \file     enc_sample_adaptive_offset.h
+ \brief    estimation part of sample adaptive offset class (header)
+ */
+
 #include "common/sample_adaptive_offset.h"
 
 

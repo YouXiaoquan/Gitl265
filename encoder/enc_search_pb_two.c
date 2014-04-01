@@ -222,6 +222,23 @@ void x265_enc_search_x_pattern_search(x265_t* h,
 	int32_t i_best_x = 0;
 	int32_t i_best_y = 0;
 
+
+	int32_t i_width = 0 ;
+	int32_t i_height = 0 ;
+	int32_t i_partition = 0 ;
+	pixel *org = NULL ;
+	int32_t i_stride_org = 0 ;
+	int32_t b_is_sads_half = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
+
+	rd_cost = &h->rd_cost ;
+	i_width = x265_pattern_get_roi_width ( pattern_key ) ;
+	i_height = x265_pattern_get_roi_height ( pattern_key ) ;
+	org = x265_pattern_get_roi_y ( pattern_key ) ;
+	i_stride_org = x265_pattern_get_pattern_l_stride ( pattern_key ) ;
+	i_partition = PartitionFromSizes(i_width, i_height) ;
+
+
 	i_srch_rng_hor_left = p_mv_srch_rng_lt->i_hor;
 	i_srch_rng_hor_right = p_mv_srch_rng_rb->i_hor;
 	i_srch_rng_ver_top = p_mv_srch_rng_lt->i_ver;
@@ -232,20 +249,13 @@ void x265_enc_search_x_pattern_search(x265_t* h,
 
 	pixel *p_ref_srch;
 
-	//-- jclee for using the sad function pointer
-	x265_rd_cost_set_dist_param_p6_2(h,
-									&h->rd_cost,
-									pattern_key,
-									p_ref_y,
-									i_ref_stride,
-									&enc_search->dist_param );
-
 	// fast encoder decision: use subsampled sad for integer me
+	b_is_sads_half = 0 ;
 	if ( h->param.b_use_fast_enc )
 	{
-		if ( enc_search->dist_param.i_rows > 8 )
+		if ( i_height > 8 )
 		{
-			enc_search->dist_param.i_sub_shift = 1;
+			b_is_sads_half = 1 ;
 		}
 	}
 
@@ -256,13 +266,22 @@ void x265_enc_search_x_pattern_search(x265_t* h,
 		{
 			//  find min. distortion position
 			p_ref_srch = p_ref_y + x;
-			enc_search->dist_param.cur = p_ref_srch;
-
-			enc_search->dist_param.i_comp = 0;
-
-			enc_search->dist_param.i_bit_depth = h->cu.pic.i_bit_depth_y;
-			i_sad = enc_search->dist_param.dist_func(&h->rd_cost, &enc_search->dist_param );
-
+			if(b_is_sads_half)
+			{
+				i_sad = rd_cost->sads_half_func[i_partition](p_ref_srch,
+														i_ref_stride,
+														org,
+														i_stride_org,
+														h->param.sps.i_bit_depth_y) ;
+			}
+			else
+			{
+				i_sad = rd_cost->sads_func[i_partition](p_ref_srch,
+													i_ref_stride,
+													org,
+													i_stride_org,
+													h->param.sps.i_bit_depth_y) ;
+			}
 			// motion cost
 			i_sad += x265_rd_cost_get_cost_p3(&h->rd_cost, x, y);
 
@@ -709,8 +728,8 @@ void x265_enc_search_encode_res_and_calc_rd_inter_cu(x265_t *h,
 													x265_data_cu_t *cu,
 													x265_image_t *p_image_org,
 													x265_image_t *p_image_pred,
-													x265_simage_t **pp_image_resi,
-													x265_simage_t **pp_image_resi_best,
+													x265_short_image_t **pp_image_resi,
+													x265_short_image_t **pp_image_resi_best,
 													x265_image_t **pp_image_reco,
 													int32_t b_skip_res )
 {
@@ -734,8 +753,10 @@ void x265_enc_search_encode_res_and_calc_rd_inter_cu(x265_t *h,
 #endif
 	double d_exact_cost = 0.0;
 	x265_image_t *p_dummy = NULL;
+	int32_t i_partition = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
 
-
+	rd_cost = &h->rd_cost ;
 	if ( x265_base_data_cu_is_intra((x265_base_data_cu_t*)cu, 0) )
 	{
 		return;
@@ -753,74 +774,48 @@ void x265_enc_search_encode_res_and_calc_rd_inter_cu(x265_t *h,
 												1,
 												0,
 												x265_base_data_cu_get_depth_p2((x265_base_data_cu_t*)cu, 0));
-		x265_simage_clear (*pp_image_resi);
+		x265_short_image_clear (*pp_image_resi);
 		x265_image_copy_to_part_image(h, p_image_pred, *pp_image_reco, 0 );
 
+
 #if X265_WEIGHTED_CHROMA_DISTORTION
-		i_distortion = x265_rd_cost_get_dist_part(h,
-												&h->rd_cost,
-												h->cu.pic.i_bit_depth_y,
-												x265_image_get_luma_addr_p2(h, *pp_image_reco),
-												x265_image_get_stride(*pp_image_reco),
-												x265_image_get_luma_addr_p2(h, p_image_org),
-												x265_image_get_stride(p_image_org),
-												i_width,
-												i_height,
-												TEXT_LUMA,
-												DF_SSE)
-							+ x265_rd_cost_get_dist_part(h,
-														&h->rd_cost,
-														h->cu.pic.i_bit_depth_c,
-														x265_image_get_cb_addr_p2(h, *pp_image_reco),
-														x265_image_get_c_stride(*pp_image_reco),
-														x265_image_get_cb_addr_p2(h, p_image_org),
-														x265_image_get_c_stride(p_image_org),
-														i_width >> 1,
-														i_height >> 1,
-														TEXT_CHROMA_U,
-														DF_SSE)
-							+ x265_rd_cost_get_dist_part(h,
-														&h->rd_cost,
-														h->cu.pic.i_bit_depth_c,
-														x265_image_get_cr_addr_p2(h, *pp_image_reco),
-														x265_image_get_c_stride(*pp_image_reco),
-														x265_image_get_cr_addr_p2(h, p_image_org),
-														x265_image_get_c_stride(p_image_org),
-														i_width >> 1,
-														i_height >> 1,
-														TEXT_CHROMA_V,
-														DF_SSE);
+		i_partition = PartitionFromSizes(i_width, i_height) ;
+		i_distortion  = rd_cost->sse_p_p_func[i_partition](x265_image_get_luma_addr_p2(h, *pp_image_reco),
+																x265_image_get_stride(*pp_image_reco),
+																x265_image_get_luma_addr_p2(h, p_image_org),
+																x265_image_get_stride(p_image_org),
+																h->cu.pic.i_bit_depth_y) ;
+		i_partition = PartitionFromSizes(i_width / 2, i_height / 2) ;
+		i_distortion = i_distortion + rd_cost->f_cb_distortion_weight
+									  * rd_cost->sse_p_p_func[i_partition](x265_image_get_cb_addr_p2(h, *pp_image_reco),
+																			x265_image_get_c_stride(*pp_image_reco),
+																			x265_image_get_cb_addr_p2(h, p_image_org),
+																			x265_image_get_c_stride(p_image_org),
+																			h->cu.pic.i_bit_depth_c) ;
+		i_distortion = i_distortion + rd_cost->f_cr_distortion_weight
+									  * rd_cost->sse_p_p_func[i_partition](x265_image_get_cr_addr_p2(h, *pp_image_reco),
+																			x265_image_get_c_stride(*pp_image_reco),
+																			x265_image_get_cr_addr_p2(h, p_image_org),
+																			x265_image_get_c_stride(p_image_org),
+																			h->cu.pic.i_bit_depth_c) ;
 #else
-		i_distortion = x265_rd_cost_get_dist_part(h,
-													&h->rd_cost,
-													h->cu.pic.i_bit_depth_y,
-													x265_image_get_luma_addr_p2(h, *pp_image_reco),
-													x265_image_get_stride(*pp_image_reco),
-													x265_image_get_luma_addr_p2(h, p_image_org),
-													x265_image_get_stride(p_image_org),
-													i_width,
-													i_height,
-													DF_SSE)
-						+ x265_rd_cost_get_dist_part(h,
-													&h->rd_cost,
-													h->cu.pic.i_bit_depth_c,
-													x265_image_get_cb_addr_p2(h, *pp_image_reco),
-													x265_image_get_c_stride(*pp_image_reco),
-													x265_image_get_cb_addr_p2(h, p_image_org),
-													x265_image_get_c_stride(p_image_org),
-													i_width >> 1,
-													i_height >> 1,
-													DF_SSE)
-						+ x265_rd_cost_get_dist_part(h,
-													&h->rd_cost,
-													h->cu.pic.i_bit_depth_c,
-													x265_image_get_cr_addr_p2(h, *pp_image_reco),
-													x265_image_get_c_stride(*pp_image_reco),
-													x265_image_get_cr_addr_p2(h, p_image_org),
-													x265_image_get_c_stride(p_image_org),
-													i_width >> 1,
-													i_height >> 1,
-													DF_SSE);
+		i_partition = PartitionFromSizes(i_width, i_height) ;
+		i_distortion  = rd_cost->sse_p_p_func[i_partition](x265_image_get_luma_addr_p2(h, *pp_image_reco),
+																x265_image_get_stride(*pp_image_reco),
+																x265_image_get_luma_addr_p2(h, p_image_org),
+																x265_image_get_stride(p_image_org),
+																h->cu.pic.i_bit_depth_y) ;
+		i_partition = PartitionFromSizes(i_width / 2, i_height / 2) ;
+		i_distortion = i_distortion + rd_cost->sse_p_p_func[i_partition](x265_image_get_cb_addr_p2(h, *pp_image_reco),
+																			x265_image_get_c_stride(*pp_image_reco),
+																			x265_image_get_cb_addr_p2(h, p_image_org),
+																			x265_image_get_c_stride(p_image_org),
+																			h->cu.pic.i_bit_depth_c)
+									+ rd_cost->sse_p_p_func[i_partition](x265_image_get_cr_addr_p2(h, *pp_image_reco),
+																			x265_image_get_c_stride(*pp_image_reco),
+																			x265_image_get_cr_addr_p2(h, p_image_org),
+																			x265_image_get_c_stride(p_image_org),
+																			h->cu.pic.i_bit_depth_c) ;
 #endif
 
 		if( h->param.b_use_sbac_rd )
@@ -886,7 +881,7 @@ void x265_enc_search_encode_res_and_calc_rd_inter_cu(x265_t *h,
 	qp_max =  b_high_pass ? x265_clip3_int32(x265_base_data_cu_get_qp_p2((x265_base_data_cu_t*)cu, 0) + enc_search->i_max_delta_qp, -h->sps[0].i_qp_bd_offset_y, X265_MAX_QP)
 							: x265_base_data_cu_get_qp_p2((x265_base_data_cu_t*)cu, 0);
 
-	x265_simage_subtract(h, *pp_image_resi, p_image_org, p_image_pred, 0, i_width );
+	x265_short_image_subtract(h, *pp_image_resi, p_image_org, p_image_pred, 0, i_width );
 
 	for ( qp = qp_min; qp <= qp_max; qp++ )
 	{
@@ -1018,7 +1013,7 @@ void x265_enc_search_encode_res_and_calc_rd_inter_cu(x265_t *h,
 		{
 			if ( !x265_base_data_cu_get_qt_root_cbf((x265_base_data_cu_t*)cu, 0))
 			{
-				x265_simage_clear(*pp_image_resi_best);
+				x265_short_image_clear(*pp_image_resi_best);
 			}
 			else
 			{
@@ -1148,70 +1143,43 @@ void x265_enc_search_encode_res_and_calc_rd_inter_cu(x265_t *h,
 
 	// update with clipped distortion and cost (qp estimation loop uses unclipped values)
 #if X265_WEIGHTED_CHROMA_DISTORTION
-	i_distortion_best = x265_rd_cost_get_dist_part(h,
-											&h->rd_cost,
-											h->cu.pic.i_bit_depth_y,
-											x265_image_get_luma_addr_p2(h, *pp_image_reco),
-											x265_image_get_stride(*pp_image_reco),
-											x265_image_get_luma_addr_p2(h, p_image_org),
-											x265_image_get_stride(p_image_org),
-											i_width,
-											i_height,
-											TEXT_LUMA,
-											DF_SSE)
-						+ x265_rd_cost_get_dist_part(h,
-													&h->rd_cost,
-													h->cu.pic.i_bit_depth_c,
-													x265_image_get_cb_addr_p2(h, *pp_image_reco),
-													x265_image_get_c_stride(*pp_image_reco),
-													x265_image_get_cb_addr_p2(h, p_image_org),
-													x265_image_get_c_stride(p_image_org),
-													i_width >> 1,
-													i_height >> 1,
-													TEXT_CHROMA_U,
-													DF_SSE)
-						+ x265_rd_cost_get_dist_part(h,
-													&h->rd_cost,
-													h->cu.pic.i_bit_depth_c,
-													x265_image_get_cr_addr_p2(h, *pp_image_reco),
-													x265_image_get_c_stride(*pp_image_reco),
-													x265_image_get_cr_addr_p2(h, p_image_org),
-													x265_image_get_c_stride(p_image_org),
-													i_width >> 1,
-													i_height >> 1,
-													TEXT_CHROMA_V,
-													DF_SSE);
+		i_partition = PartitionFromSizes(i_width, i_height) ;
+		i_distortion_best = rd_cost->sse_p_p_func[i_partition](x265_image_get_luma_addr_p2(h, *pp_image_reco),
+																x265_image_get_stride(*pp_image_reco),
+																x265_image_get_luma_addr_p2(h, p_image_org),
+																x265_image_get_stride(p_image_org),
+																h->cu.pic.i_bit_depth_y) ;
+		i_partition = PartitionFromSizes(i_width / 2, i_height / 2) ;
+		i_distortion_best = i_distortion_best + rd_cost->f_cb_distortion_weight
+									  * rd_cost->sse_p_p_func[i_partition](x265_image_get_cb_addr_p2(h, *pp_image_reco),
+																			x265_image_get_c_stride(*pp_image_reco),
+																			x265_image_get_cb_addr_p2(h, p_image_org),
+																			x265_image_get_c_stride(p_image_org),
+																			h->cu.pic.i_bit_depth_c) ;
+		i_distortion_best = i_distortion_best + rd_cost->f_cr_distortion_weight
+									  * rd_cost->sse_p_p_func[i_partition](x265_image_get_cr_addr_p2(h, *pp_image_reco),
+																			x265_image_get_c_stride(*pp_image_reco),
+																			x265_image_get_cr_addr_p2(h, p_image_org),
+																			x265_image_get_c_stride(p_image_org),
+																			h->cu.pic.i_bit_depth_c) ;
 #else
-	i_distortion_best = x265_rd_cost_get_dist_part(h,
-												&h->rd_cost,
-												h->cu.pic.i_bit_depth_y,
-												x265_image_get_luma_addr_p2(h, *pp_image_reco),
-												x265_image_get_stride(*pp_image_reco),
-												x265_image_get_luma_addr_p2(h, p_image_org),
-												x265_image_get_stride(p_image_org),
-												i_width,
-												i_height,
-												DF_SSE)
-					+ x265_rd_cost_get_dist_part(h,
-												&h->rd_cost,
-												h->cu.pic.i_bit_depth_c,
-												x265_image_get_cb_addr_p2(h, *pp_image_reco),
-												x265_image_get_c_stride(*pp_image_reco),
-												x265_image_get_cb_addr_p2(h, p_image_org),
-												x265_image_get_c_stride(p_image_org),
-												i_width >> 1,
-												i_height >> 1,
-												DF_SSE)
-					+ x265_rd_cost_get_dist_part(h,
-												&h->rd_cost,
-												h->cu.pic.i_bit_depth_c,
-												x265_image_get_cr_addr_p2(h, *pp_image_reco),
-												x265_image_get_c_stride(*pp_image_reco),
-												x265_image_get_cr_addr_p2(h, p_image_org),
-												x265_image_get_c_stride(p_image_org),
-												i_width >> 1,
-												i_height >> 1,
-												DF_SSE);
+		i_partition = PartitionFromSizes(i_width, i_height) ;
+		i_distortion_best  = rd_cost->sse_p_p_func[i_partition](x265_image_get_luma_addr_p2(h, *pp_image_reco),
+																x265_image_get_stride(*pp_image_reco),
+																x265_image_get_luma_addr_p2(h, p_image_org),
+																x265_image_get_stride(p_image_org),
+																h->cu.pic.i_bit_depth_y) ;
+		i_partition = PartitionFromSizes(i_width / 2, i_height / 2) ;
+		i_distortion_best = i_distortion_best + rd_cost->sse_p_p_func[i_partition](x265_image_get_cb_addr_p2(h, *pp_image_reco),
+																			x265_image_get_c_stride(*pp_image_reco),
+																			x265_image_get_cb_addr_p2(h, p_image_org),
+																			x265_image_get_c_stride(p_image_org),
+																			h->cu.pic.i_bit_depth_c)
+									+ rd_cost->sse_p_p_func[i_partition](x265_image_get_cr_addr_p2(h, *pp_image_reco),
+																			x265_image_get_c_stride(*pp_image_reco),
+																			x265_image_get_cr_addr_p2(h, p_image_org),
+																			x265_image_get_c_stride(p_image_org),
+																			h->cu.pic.i_bit_depth_c) ;
 #endif
 	d_cost_best = x265_rd_cost_calc_rd_cost(&h->rd_cost, i_bits_best, i_distortion_best, 0, DF_DEFAULT );
 
@@ -1247,7 +1215,7 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 											uint32_t i_quadrant,
 											uint32_t i_abs_part_idx,
 											uint32_t abs_t_upart_idx,
-											x265_simage_t *resi,
+											x265_short_image_t *resi,
 											const uint32_t i_depth,
 											double *p_cost,
 											uint32_t *p_bits,
@@ -1295,23 +1263,23 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 	uint32_t i_num_samples_luma = 0;
 	uint32_t i_num_samples_chro = 0;
 	uint32_t i_dist_y = 0;
-	spixel *resi_curr_y = NULL;
+	short_pixel *resi_curr_y = NULL;
 	int32_t scaling_list_type = 0;
 	uint32_t i_nonzero_dist_y = 0;
 	double single_cost_y = 0.0;
 	uint32_t i_null_bits_y = 0;
 	double null_cost_y = 0.0;
-	spixel *ptr = NULL;
+	short_pixel *ptr = NULL;
 	uint32_t i_stride = 0;
 	uint32_t i_y = 0;
 	uint32_t i_dist_u = 0;
 	uint32_t i_dist_v = 0;
-	spixel *resi_curr_u = NULL;
+	short_pixel *resi_curr_u = NULL;
 	uint32_t i_nonzero_dist_u = 0;
 	double d_single_cost_u = 0.0;
 	uint32_t i_null_bits_u = 0;
 	double d_null_cost_u = 0.0;
-	spixel *resi_curr_v = NULL;
+	short_pixel *resi_curr_v = NULL;
 	double d_single_cost_v = 0.0;
 	uint32_t i_null_bits_v = 0;
 	double d_null_cost_v = 0.0;
@@ -1322,7 +1290,7 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 #if X265_ADAPTIVE_QP_SELECTION
 	x265_coeff_t best_arl_coeff_y[32*32];
 #endif
-	spixel best_resi_y[32*32];
+	short_pixel best_resi_y[32*32];
 	uint32_t i_ts_single_bits_y = 0;
 	uint32_t i_nonzero_dist_v, i_abs_sum_transform_skipu, i_abs_sum_transform_skip_v;
 	uint32_t resi_c_stride = 0;
@@ -1330,7 +1298,7 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 #if X265_ADAPTIVE_QP_SELECTION
 	x265_coeff_t best_arl_coeff_u[32*32], best_arl_coeff_v[32*32];
 #endif
-	spixel best_resi_u[32*32], best_resi_v[32*32];
+	short_pixel best_resi_u[32*32], best_resi_v[32*32];
 	uint32_t i_subdiv_dist = 0;
 	uint32_t i_subdiv_bits = 0;
 	double d_subdiv_cost = 0.0;
@@ -1339,8 +1307,10 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 	uint32_t i_y_cbf = 0;
 	uint32_t i_u_cbf = 0;
 	uint32_t i_v_cbf = 0;
+	int32_t i_partition = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
 
-
+	rd_cost = &h->rd_cost ;
 	i_tr_mode = i_depth - x265_base_data_cu_get_depth_p2((x265_base_data_cu_t*)cu, 0 );
 	assert( x265_base_data_cu_get_depth_p2((x265_base_data_cu_t*)cu, 0 )
 			== x265_base_data_cu_get_depth_p2((x265_base_data_cu_t*)cu, i_abs_part_idx ) );
@@ -1455,8 +1425,8 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 		x265_tr_quant_transform_nxn(h,
 									&h->tr_quant,
 									cu,
-									x265_simage_get_luma_addr_p3(h, resi, abs_t_upart_idx ),
-									x265_simage_get_stride(resi),
+									x265_short_image_get_luma_addr_p3(h, resi, abs_t_upart_idx ),
+									x265_short_image_get_stride(resi),
 									coeff_curr_y,
 #if X265_ADAPTIVE_QP_SELECTION
 									&arl_coeff_curr_y,
@@ -1501,8 +1471,8 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 			x265_tr_quant_transform_nxn(h,
 										&h->tr_quant,
 										cu,
-										x265_simage_get_cb_addr_p3(h, resi, abs_t_upart_idx ),
-										x265_simage_get_c_stride(resi),
+										x265_short_image_get_cb_addr_p3(h, resi, abs_t_upart_idx ),
+										x265_short_image_get_c_stride(resi),
 										coeff_curr_u,
 #if X265_ADAPTIVE_QP_SELECTION
 										&arl_coeff_curr_u,
@@ -1523,8 +1493,8 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 			x265_tr_quant_transform_nxn(h,
 										&h->tr_quant,
 										cu,
-										x265_simage_get_cr_addr_p3(h, resi, abs_t_upart_idx ),
-										x265_simage_get_c_stride(resi),
+										x265_short_image_get_cr_addr_p3(h, resi, abs_t_upart_idx ),
+										x265_short_image_get_c_stride(resi),
 										coeff_curr_v,
 #if X265_ADAPTIVE_QP_SELECTION
 										&arl_coeff_curr_u,
@@ -1620,17 +1590,12 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 
 		memset( enc_search->temp_pel, 0, sizeof( pixel ) * i_num_samples_luma ); // not necessary needed for inside of recursion (only at the beginning)
 
-		i_dist_y = x265_rd_cost_get_sse_p_s(h,
-											&h->rd_cost,
-											h->cu.pic.i_bit_depth_y,
-											enc_search->temp_pel,
-											tr_width,
-											x265_simage_get_luma_addr_p3(h, resi, abs_t_upart_idx),
-											x265_simage_get_stride(resi),
-											tr_width,
-											tr_height,
-											TEXT_LUMA,
-											DF_SSE ); // initialized with zero residual destortion
+		i_partition = PartitionFromSizes(tr_width, tr_height) ;
+		i_dist_y = rd_cost->sse_p_s_func[i_partition](enc_search->temp_pel,
+														tr_width,
+														x265_short_image_get_luma_addr_p3(h, resi, abs_t_upart_idx),
+														x265_short_image_get_stride(resi),
+														h->cu.pic.i_bit_depth_y); // initialized with zero residual destortion
 
 		if ( p_zero_dist )
 		{
@@ -1638,7 +1603,7 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 		}
 		if( i_abs_sum_y )
 		{
-			resi_curr_y = x265_simage_get_luma_addr_p3(h, enc_search->ppc_qt_temp_simage[ i_qt_temp_access_layer ], abs_t_upart_idx );
+			resi_curr_y = x265_short_image_get_luma_addr_p3(h, enc_search->ppc_qt_temp_short_image[ i_qt_temp_access_layer ], abs_t_upart_idx );
 
 			x265_tr_quant_set_qp_for_quant(&h->tr_quant,
 											x265_base_data_cu_get_qp_p2((x265_base_data_cu_t*)cu, 0 ),
@@ -1654,24 +1619,19 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 											TEXT_LUMA,
 											X265_REG_DCT,
 											resi_curr_y,
-											x265_simage_get_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
+											x265_short_image_get_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
 											coeff_curr_y,
 											tr_width,
 											tr_height,
 											scaling_list_type,
 											0 );//this is for inter mode only
 
-			i_nonzero_dist_y = x265_rd_cost_get_sse_s_s(h,
-														&h->rd_cost,
-														h->cu.pic.i_bit_depth_y,
-														x265_simage_get_luma_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx ),
-														x265_simage_get_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
-														x265_simage_get_luma_addr_p3(h, resi, abs_t_upart_idx ),
-														x265_simage_get_stride(resi),
-														tr_width,
-														tr_height,
-														TEXT_LUMA,
-														DF_SSE );
+			i_partition = PartitionFromSizes(tr_width, tr_height) ;
+			i_nonzero_dist_y = rd_cost->sse_s_s_func[i_partition](x265_short_image_get_luma_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx ),
+																x265_short_image_get_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																x265_short_image_get_luma_addr_p3(h, resi, abs_t_upart_idx ),
+																x265_short_image_get_stride(resi),
+																h->cu.pic.i_bit_depth_y);
 			if (x265_base_data_cu_is_lossless_coded(h, (x265_base_data_cu_t*)cu, 0))
 			{
 				i_dist_y = i_nonzero_dist_y;
@@ -1712,11 +1672,11 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 
 		if( !i_abs_sum_y )
 		{
-			ptr = x265_simage_get_luma_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx );
-			i_stride = x265_simage_get_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]);
+			ptr = x265_short_image_get_luma_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx );
+			i_stride = x265_short_image_get_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]);
 			for( i_y = 0; i_y < tr_height; ++i_y )
 			{
-				memset( ptr, 0, sizeof( spixel ) * tr_width );
+				memset( ptr, 0, sizeof( short_pixel ) * tr_width );
 				ptr += i_stride;
 			}
 		}
@@ -1725,26 +1685,30 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 		i_dist_v = 0;
 		if( b_code_chroma )
 		{
-			i_dist_u = x265_rd_cost_get_sse_p_s(h,
-												&h->rd_cost,
-												h->cu.pic.i_bit_depth_c,
-												enc_search->temp_pel,
-												tr_width_c,
-												x265_simage_get_cb_addr_p3(h, resi, abs_t_upart_idx_c ),
-												x265_simage_get_c_stride(resi),
-												tr_width_c,
-												tr_height_c
+			i_partition = PartitionFromSizes(tr_width_c, tr_height_c) ;
 #if X265_WEIGHTED_CHROMA_DISTORTION
-												,TEXT_CHROMA_U
+			// initialized with zero residual destortion
+			i_dist_u = rd_cost->f_cb_distortion_weight
+						* rd_cost->sse_p_s_func[i_partition](enc_search->temp_pel,
+														tr_width_c,
+														x265_short_image_get_cb_addr_p3(h, resi, abs_t_upart_idx_c ),
+														x265_short_image_get_c_stride(resi),
+														h->cu.pic.i_bit_depth_c);
+#else
+			// initialized with zero residual destortion
+			i_dist_u = rd_cost->sse_p_s_func[i_partition](enc_search->temp_pel,
+														tr_width_c,
+														x265_short_image_get_cb_addr_p3(h, resi, abs_t_upart_idx_c ),
+														x265_short_image_get_c_stride(resi),
+														h->cu.pic.i_bit_depth_c);
 #endif
-												,DF_SSE); // initialized with zero residual destortion
 			if ( p_zero_dist )
 			{
 				*p_zero_dist += i_dist_u;
 			}
 			if( i_abs_sum_u )
 			{
-				resi_curr_u = x265_simage_get_cb_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c );
+				resi_curr_u = x265_short_image_get_cb_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c );
 				cur_chroma_qp_offset = h->pps[0].i_chroma_cb_qp_offset + h->slice->i_slice_qp_delta_cb;
 				x265_tr_quant_set_qp_for_quant(&h->tr_quant,
 												x265_base_data_cu_get_qp_p2((x265_base_data_cu_t*)cu, 0 ),
@@ -1760,26 +1724,29 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 												TEXT_CHROMA,
 												X265_REG_DCT,
 												resi_curr_u,
-												x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
+												x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
 												coeff_curr_u,
 												tr_width_c,
 												tr_height_c,
 												scaling_list_type,
 												0);
 
-				i_nonzero_dist_u = x265_rd_cost_get_sse_s_s(h,
-															&h->rd_cost,
-															h->cu.pic.i_bit_depth_c,
-															x265_simage_get_cb_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c),
-															x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
-															x265_simage_get_cb_addr_p3(h, resi, abs_t_upart_idx_c),
-															x265_simage_get_c_stride(resi),
-															tr_width_c,
-															tr_height_c
+				i_partition = PartitionFromSizes(tr_width_c, tr_height_c) ;
 #if X265_WEIGHTED_CHROMA_DISTORTION
-															,TEXT_CHROMA_U
+				i_nonzero_dist_u = rd_cost->f_cb_distortion_weight *
+									rd_cost->sse_s_s_func[i_partition](x265_short_image_get_cb_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																	x265_short_image_get_cb_addr_p3(h, resi, abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(resi),
+																	h->cu.pic.i_bit_depth_c);
+
+#else
+				i_nonzero_dist_u = rd_cost->sse_s_s_func[i_partition](x265_short_image_get_cb_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																	x265_short_image_get_cb_addr_p3(h, resi, abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(resi),
+																	h->cu.pic.i_bit_depth_c);
 #endif
-															,DF_SSE);
 
 				if(x265_base_data_cu_is_lossless_coded(h, (x265_base_data_cu_t*)cu, 0))
 				{
@@ -1820,35 +1787,39 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 			}
 			if( !i_abs_sum_u )
 			{
-				ptr = x265_simage_get_cb_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c );
-				i_stride = x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]);
+				ptr = x265_short_image_get_cb_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c );
+				i_stride = x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]);
 				for( i_y = 0; i_y < tr_height_c; ++i_y )
 				{
-					memset( ptr, 0, sizeof(spixel) * tr_width_c );
+					memset( ptr, 0, sizeof(short_pixel) * tr_width_c );
 					ptr += i_stride;
 				}
 			}
 
-			i_dist_v = x265_rd_cost_get_sse_p_s(h,
-												&h->rd_cost,
-												h->cu.pic.i_bit_depth_c,
-												enc_search->temp_pel,
-												tr_width_c,
-												x265_simage_get_cr_addr_p3(h, resi, abs_t_upart_idx_c),
-												x265_simage_get_c_stride(resi),
-												tr_width_c,
-												tr_height_c
+			i_partition = PartitionFromSizes(tr_width_c, tr_height_c) ;
 #if X265_WEIGHTED_CHROMA_DISTORTION
-												,TEXT_CHROMA_V
+			// initialized with zero residual destortion
+			i_dist_v = rd_cost->f_cr_distortion_weight
+						* rd_cost->sse_p_s_func[i_partition](enc_search->temp_pel,
+															tr_width_c,
+															x265_short_image_get_cr_addr_p3(h, resi, abs_t_upart_idx_c),
+															x265_short_image_get_c_stride(resi),
+															h->cu.pic.i_bit_depth_c);
+#else
+			// initialized with zero residual destortion
+			i_dist_v = rd_cost->sse_p_s_func[i_partition](enc_search->temp_pel,
+														tr_width_c,
+														x265_short_image_get_cr_addr_p3(h, resi, abs_t_upart_idx_c),
+														x265_short_image_get_c_stride(resi),
+														h->cu.pic.i_bit_depth_c);
 #endif
-												,DF_SSE); // initialized with zero residual destortion
 			if ( p_zero_dist )
 			{
 				*p_zero_dist += i_dist_v;
 			}
 			if( i_abs_sum_v )
 			{
-				resi_curr_v = x265_simage_get_cr_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c );
+				resi_curr_v = x265_short_image_get_cr_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c );
 				cur_chroma_qp_offset = h->pps[0].i_chroma_cr_qp_offset + h->slice->i_slice_qp_delta_cr;
 				x265_tr_quant_set_qp_for_quant(&h->tr_quant,
 												x265_base_data_cu_get_qp_p2((x265_base_data_cu_t*)cu, 0 ),
@@ -1864,26 +1835,28 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 												TEXT_CHROMA,
 												X265_REG_DCT,
 												resi_curr_v,
-												x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
+												x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
 												coeff_curr_v,
 												tr_width_c,
 												tr_height_c,
 												scaling_list_type,
 												0 );
 
-				i_nonzero_dist_v = x265_rd_cost_get_sse_s_s(h,
-															&h->rd_cost,
-															h->cu.pic.i_bit_depth_c,
-															x265_simage_get_cr_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c),
-															x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
-															x265_simage_get_cr_addr_p3(h, resi, abs_t_upart_idx_c),
-															x265_simage_get_c_stride(resi),
-															tr_width_c,
-															tr_height_c
+				i_partition = PartitionFromSizes(tr_width_c, tr_height_c) ;
 #if X265_WEIGHTED_CHROMA_DISTORTION
-															,TEXT_CHROMA_V
+				i_nonzero_dist_v = rd_cost->f_cr_distortion_weight *
+									rd_cost->sse_s_s_func[i_partition](x265_short_image_get_cr_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																	x265_short_image_get_cr_addr_p3(h, resi, abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(resi),
+																	h->cu.pic.i_bit_depth_c);
+#else
+				i_nonzero_dist_v = rd_cost->sse_s_s_func[i_partition](x265_short_image_get_cr_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																	x265_short_image_get_cr_addr_p3(h, resi, abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(resi),
+																	h->cu.pic.i_bit_depth_c);
 #endif
-															,DF_SSE);
 				if (x265_base_data_cu_is_lossless_coded(h, (x265_base_data_cu_t*)cu, 0))
 				{
 					i_dist_v = i_nonzero_dist_v;
@@ -1923,11 +1896,11 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 			}
 			if( !i_abs_sum_v )
 			{
-				ptr = x265_simage_get_cr_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c );
-				i_stride = x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]);
+				ptr = x265_short_image_get_cr_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c );
+				i_stride = x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]);
 				for( i_y = 0; i_y < tr_height_c; ++i_y )
 				{
-					memset( ptr, 0, sizeof(spixel) * tr_width_c );
+					memset( ptr, 0, sizeof(short_pixel) * tr_width_c );
 					ptr += i_stride;
 				}
 			}
@@ -1956,8 +1929,8 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 
 		if( b_check_transform_skip_y )
 		{
-			resi_curr_y = x265_simage_get_luma_addr_p3(h, enc_search->ppc_qt_temp_simage[ i_qt_temp_access_layer ], abs_t_upart_idx );
-			resi_y_stride = x265_simage_get_stride(enc_search->ppc_qt_temp_simage[ i_qt_temp_access_layer ]);
+			resi_curr_y = x265_short_image_get_luma_addr_p3(h, enc_search->ppc_qt_temp_short_image[ i_qt_temp_access_layer ], abs_t_upart_idx );
+			resi_y_stride = x265_short_image_get_stride(enc_search->ppc_qt_temp_short_image[ i_qt_temp_access_layer ]);
 
 			memcpy( best_coeff_y, coeff_curr_y, sizeof(x265_coeff_t) * i_num_samples_luma );
 
@@ -1969,7 +1942,7 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 			{
 				memcpy( &best_resi_y[loop*tr_width],
 						resi_curr_y+loop*resi_y_stride,
-						sizeof(spixel) * tr_width );
+						sizeof(short_pixel) * tr_width );
 			}
 
 			if( h->param.b_use_sbac_rd )
@@ -2006,8 +1979,8 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 			x265_tr_quant_transform_nxn(h,
 										&h->tr_quant,
 										cu,
-										x265_simage_get_luma_addr_p3(h, resi, abs_t_upart_idx ),
-										x265_simage_get_stride(resi),
+										x265_short_image_get_luma_addr_p3(h, resi, abs_t_upart_idx ),
+										x265_short_image_get_stride(resi),
 										coeff_curr_y,
 #if X265_ADAPTIVE_QP_SELECTION
 										&arl_coeff_curr_y,
@@ -2060,25 +2033,19 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 												TEXT_LUMA,
 												X265_REG_DCT,
 												resi_curr_y,
-												x265_simage_get_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
+												x265_short_image_get_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
 												coeff_curr_y,
 												tr_width,
 												tr_height,
 												scaling_list_type,
 												1 );
 
-				i_nonzero_dist_y = x265_rd_cost_get_sse_s_s(h,
-															&h->rd_cost,
-															h->cu.pic.i_bit_depth_y,
-															x265_simage_get_luma_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx ),
-															x265_simage_get_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
-															x265_simage_get_luma_addr_p3(h, resi, abs_t_upart_idx ),
-															x265_simage_get_stride(resi),
-															tr_width,
-															tr_height,
-															TEXT_LUMA,
-															DF_SSE );
-
+				i_partition = PartitionFromSizes(tr_width, tr_height) ;
+				i_nonzero_dist_y = rd_cost->sse_s_s_func[i_partition](x265_short_image_get_luma_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx ),
+																	x265_short_image_get_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																	x265_short_image_get_luma_addr_p3(h, resi, abs_t_upart_idx ),
+																	x265_short_image_get_stride(resi),
+																	h->cu.pic.i_bit_depth_y);
 				d_single_cost_y = x265_rd_cost_calc_rd_cost(&h->rd_cost, i_ts_single_bits_y, i_nonzero_dist_y, 0, DF_DEFAULT );
 			}
 
@@ -2096,7 +2063,7 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 #endif
 				for( int32_t i = 0; i < tr_height; ++i )
 				{
-					memcpy( resi_curr_y+i*resi_y_stride, &best_resi_y[i*tr_width], sizeof(spixel) * tr_width );
+					memcpy( resi_curr_y+i*resi_y_stride, &best_resi_y[i*tr_width], sizeof(short_pixel) * tr_width );
 				}
 			}
 			else
@@ -2116,9 +2083,9 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 
 		if( b_code_chroma && b_check_transform_skip_uv  )
 		{
-			resi_curr_u = x265_simage_get_cb_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c );
-			resi_curr_v = x265_simage_get_cr_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c );
-			resi_c_stride = x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]);
+			resi_curr_u = x265_short_image_get_cb_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c );
+			resi_curr_v = x265_short_image_get_cr_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c );
+			resi_c_stride = x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]);
 
 			memcpy( best_coeff_u, coeff_curr_u, sizeof(x265_coeff_t) * i_num_samples_chro );
 			memcpy( best_coeff_v, coeff_curr_v, sizeof(x265_coeff_t) * i_num_samples_chro );
@@ -2131,10 +2098,10 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 			{
 				memcpy( &best_resi_u[loop*tr_width_c],
 						resi_curr_u+loop*resi_c_stride,
-						sizeof(spixel) * tr_width_c );
+						sizeof(short_pixel) * tr_width_c );
 				memcpy( &best_resi_v[loop*tr_width_c],
 						resi_curr_v+loop*resi_c_stride,
-						sizeof(spixel) * tr_width_c );
+						sizeof(short_pixel) * tr_width_c );
 			}
 
 			if( h->param.b_use_sbac_rd )
@@ -2179,8 +2146,8 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 			x265_tr_quant_transform_nxn(h,
 										&h->tr_quant,
 										cu,
-										x265_simage_get_cb_addr_p3(h, resi, abs_t_upart_idx ),
-										x265_simage_get_c_stride(resi),
+										x265_short_image_get_cb_addr_p3(h, resi, abs_t_upart_idx ),
+										x265_short_image_get_c_stride(resi),
 										coeff_curr_u,
 #if X265_ADAPTIVE_QP_SELECTION
 										&arl_coeff_curr_u,
@@ -2200,8 +2167,8 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 			x265_tr_quant_transform_nxn(h,
 										&h->tr_quant,
 										cu,
-										x265_simage_get_cr_addr_p3(h, resi, abs_t_upart_idx ),
-										x265_simage_get_c_stride(resi),
+										x265_short_image_get_cr_addr_p3(h, resi, abs_t_upart_idx ),
+										x265_short_image_get_c_stride(resi),
 										coeff_curr_v,
 #if X265_ADAPTIVE_QP_SELECTION
 										&arl_coeff_curr_v,
@@ -2265,27 +2232,28 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 												TEXT_CHROMA,
 												X265_REG_DCT,
 												resi_curr_u,
-												x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
+												x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
 												coeff_curr_u,
 												tr_width_c,
 												tr_height_c,
 												scaling_list_type,
 												1);
 
-				i_nonzero_dist_u = x265_rd_cost_get_sse_s_s(h,
-															&h->rd_cost,
-															h->cu.pic.i_bit_depth_c,
-															x265_simage_get_cb_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c),
-															x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
-															x265_simage_get_cb_addr_p3(h, resi, abs_t_upart_idx_c),
-															x265_simage_get_c_stride(resi),
-															tr_width_c,
-															tr_height_c
+				i_partition = PartitionFromSizes(tr_width_c, tr_height_c) ;
 #if X265_WEIGHTED_CHROMA_DISTORTION
-															,TEXT_CHROMA_U
+				i_nonzero_dist_u = rd_cost->f_cb_distortion_weight *
+									rd_cost->sse_s_s_func[i_partition](x265_short_image_get_cb_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																	x265_short_image_get_cb_addr_p3(h, resi, abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(resi),
+																	h->cu.pic.i_bit_depth_c);
+#else
+				i_nonzero_dist_u = rd_cost->sse_s_s_func[i_partition](x265_short_image_get_cb_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																	x265_short_image_get_cb_addr_p3(h, resi, abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(resi),
+																	h->cu.pic.i_bit_depth_c);
 #endif
-															,DF_SSE);
-
 				d_single_cost_u = x265_rd_cost_calc_rd_cost(&h->rd_cost, i_single_bits_u, i_nonzero_dist_u, 0, DF_DEFAULT );
 			}
 
@@ -2304,7 +2272,7 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 #endif
 				for( int32_t i = 0; i < tr_height_c; ++i )
 				{
-					memcpy( resi_curr_u+i*resi_c_stride, &best_resi_u[i*tr_width_c], sizeof(spixel) * tr_width_c );
+					memcpy( resi_curr_u+i*resi_c_stride, &best_resi_u[i*tr_width_c], sizeof(short_pixel) * tr_width_c );
 				}
 			}
 			else
@@ -2349,26 +2317,27 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 												TEXT_CHROMA,
 												X265_REG_DCT,
 												resi_curr_v,
-												x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
+												x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
 												coeff_curr_v,
 												tr_width_c,
 												tr_height_c,
 												scaling_list_type,
 												1 );
-
-				i_nonzero_dist_v = x265_rd_cost_get_sse_s_s(h,
-															&h->rd_cost,
-															h->cu.pic.i_bit_depth_c,
-															x265_simage_get_cr_addr_p3(h, enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer], abs_t_upart_idx_c),
-															x265_simage_get_c_stride(enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer]),
-															x265_simage_get_cr_addr_p3(h, resi, abs_t_upart_idx_c),
-															x265_simage_get_c_stride(resi),
-															tr_width_c,
-															tr_height_c
+				i_partition = PartitionFromSizes(tr_width_c, tr_height_c) ;
 #if X265_WEIGHTED_CHROMA_DISTORTION
-															,TEXT_CHROMA_V
+				i_nonzero_dist_v = rd_cost->f_cr_distortion_weight *
+									rd_cost->sse_s_s_func[i_partition](x265_short_image_get_cr_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																	x265_short_image_get_cr_addr_p3(h, resi, abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(resi),
+																	h->cu.pic.i_bit_depth_c);
+#else
+				i_nonzero_dist_v = rd_cost->sse_s_s_func[i_partition](x265_short_image_get_cr_addr_p3(h, enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer], abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer]),
+																	x265_short_image_get_cr_addr_p3(h, resi, abs_t_upart_idx_c),
+																	x265_short_image_get_c_stride(resi),
+																	h->cu.pic.i_bit_depth_c);
 #endif
-															,DF_SSE);
 				d_single_cost_v = x265_rd_cost_calc_rd_cost(&h->rd_cost, i_single_bits_v, i_nonzero_dist_v, 0, DF_DEFAULT );
 			}
 
@@ -2387,7 +2356,7 @@ void x265_enc_search_x_estimate_residual_qt(x265_t* h,
 #endif
 				for( int32_t i = 0; i < tr_height_c; ++i )
 				{
-					memcpy( resi_curr_v+i*resi_c_stride, &best_resi_v[i*tr_width_c], sizeof(spixel) * tr_width_c );
+					memcpy( resi_curr_v+i*resi_c_stride, &best_resi_v[i*tr_width_c], sizeof(short_pixel) * tr_width_c );
 				}
 			}
 			else
@@ -2843,7 +2812,7 @@ void x265_enc_search_x_set_residual_qt_data(x265_t* h,
 											uint32_t i_quadrant,
 											uint32_t i_abs_part_idx,
 											uint32_t abs_t_upart_idx,
-											x265_simage_t *resi,
+											x265_short_image_t *resi,
 											uint32_t i_depth,
 											int32_t b_spatial )
 {
@@ -2905,8 +2874,8 @@ void x265_enc_search_x_set_residual_qt_data(x265_t* h,
 		{
 			tr_width  = 1 << i_log2tr_size;
 			tr_height = 1 << i_log2tr_size;
-			x265_simage_copy_part_to_part_luma_s (h,
-												enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer],
+			x265_short_image_copy_part_to_part_luma_s (h,
+												enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer],
 												resi,
 												abs_t_upart_idx,
 												tr_width,
@@ -2915,8 +2884,8 @@ void x265_enc_search_x_set_residual_qt_data(x265_t* h,
 			if( b_code_chroma )
 			{
 				{
-					x265_simage_copy_part_to_part_chroma_s(h,
-														enc_search->ppc_qt_temp_simage[i_qt_temp_access_layer],
+					x265_short_image_copy_part_to_part_chroma_s(h,
+														enc_search->ppc_qt_temp_short_image[i_qt_temp_access_layer],
 														resi,
 														i_abs_part_idx,
 														1 << i_log2tr_size_c,
@@ -3065,99 +3034,79 @@ void x265_enc_search_x_ext_dif_up_sampling_h(x265_t *h,
 	int32_t src_stride = 0;
 	int32_t int_stride = 0;
 	int32_t dst_stride = 0;
-	spixel *int_ptr = NULL;
+	short_pixel *int_ptr = NULL;
 	pixel *dst_ptr = NULL;
 	int32_t filter_size = 0;
 	int32_t half_filter_size = 0;
 	pixel *src_ptr = NULL;
+	x265_ip_t *ip = NULL ;
 
+	ip = &enc_search->prediction.ip ;
 	width = x265_pattern_get_roi_width(pattern);
 	height = x265_pattern_get_roi_height(pattern);
 	src_stride  = x265_pattern_get_pattern_l_stride(pattern);
 
-	int_stride = x265_simage_get_stride(&enc_search->prediction.filtered_block_tmp[0]);
+	int_stride = x265_short_image_get_stride(&enc_search->prediction.filtered_block_tmp[0]);
 	dst_stride = x265_image_get_stride(&enc_search->prediction.filtered_block[0][0]);
 	filter_size = X265_NTAPS_LUMA;
 	half_filter_size = (filter_size>>1);
 	src_ptr = x265_pattern_get_roi_y(pattern) - half_filter_size*src_stride - 1;
 
 
-	x265_interpolation_filter_filter_hor_luma_p_s(h,
-											&enc_search->prediction.interpolation_filter,
-											src_ptr,
-											src_stride,
-											x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]),
-											int_stride,
-											width + 1,
-											height + filter_size,
-											0,
-											0);
-	x265_interpolation_filter_filter_hor_luma_p_s(h,
-											&enc_search->prediction.interpolation_filter,
-											src_ptr,
-											src_stride,
-											x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]),
-											int_stride,
-											width + 1,
-											height + filter_size,
-											2,
-											0);
+	ip->ip_filter_hor_luma_p_s[0](src_ptr,
+								src_stride,
+								x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]),
+								int_stride,
+								width + 1,
+								height + filter_size,
+								h->param.sps.i_bit_depth_y) ;
+	ip->ip_filter_hor_luma_p_s[2](src_ptr,
+								src_stride,
+								x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]),
+								int_stride,
+								width + 1,
+								height + filter_size,
+								h->param.sps.i_bit_depth_y) ;
 
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]) + half_filter_size * int_stride + 1;
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]) + half_filter_size * int_stride + 1;
 	dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[0][0]);
-	x265_interpolation_filter_filter_ver_luma_s_p(h,
-											&enc_search->prediction.interpolation_filter,
-											int_ptr,
-											int_stride,
-											dst_ptr,
-											dst_stride,
-											width + 0,
-											height + 0,
-											0,
-											0,
-											1);
+	ip->ip_filter_ver_luma_s_p[0](int_ptr,
+								int_stride,
+								dst_ptr,
+								dst_stride,
+								width + 0,
+								height + 0,
+								h->param.sps.i_bit_depth_y) ;
 
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]) + (half_filter_size-1) * int_stride + 1;
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]) + (half_filter_size-1) * int_stride + 1;
 	dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[2][0]);
-	x265_interpolation_filter_filter_ver_luma_s_p(h,
-											&enc_search->prediction.interpolation_filter,
-											int_ptr,
-											int_stride,
-											dst_ptr,
-											dst_stride,
-											width + 0,
-											height + 1,
-											2,
-											0,
-											1);
+	ip->ip_filter_ver_luma_s_p[2](int_ptr,
+								int_stride,
+								dst_ptr,
+								dst_stride,
+								width + 0,
+								height + 1,
+								h->param.sps.i_bit_depth_y) ;
 
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]) + half_filter_size * int_stride;
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]) + half_filter_size * int_stride;
 	dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[0][2]);
-	x265_interpolation_filter_filter_ver_luma_s_p(h,
-											&enc_search->prediction.interpolation_filter,
-											int_ptr,
-											int_stride,
-											dst_ptr,
-											dst_stride,
-											width + 1,
-											height + 0,
-											0,
-											0,
-											1);
+	ip->ip_filter_ver_luma_s_p[0](int_ptr,
+								int_stride,
+								dst_ptr,
+								dst_stride,
+								width + 1,
+								height + 0,
+								h->param.sps.i_bit_depth_y) ;
 
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]) + (half_filter_size-1) * int_stride;
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]) + (half_filter_size-1) * int_stride;
 	dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[2][2]);
-	x265_interpolation_filter_filter_ver_luma_s_p(h,
-											&enc_search->prediction.interpolation_filter,
-											int_ptr,
-											int_stride,
-											dst_ptr,
-											dst_stride,
-											width + 1,
-											height + 1,
-											2,
-											0,
-											1);
+	ip->ip_filter_ver_luma_s_p[2](int_ptr,
+								int_stride,
+								dst_ptr,
+								dst_stride,
+								width + 1,
+								height + 1,
+								h->param.sps.i_bit_depth_y) ;
 }
 
 
@@ -3183,17 +3132,18 @@ void x265_enc_search_x_ext_dif_up_sampling_q(x265_t *h,
 	pixel *src_ptr;
 	int32_t int_stride = 0;
 	int32_t dst_stride = 0;
-	spixel *int_ptr = NULL;
+	short_pixel *int_ptr = NULL;
 	pixel *dst_ptr = NULL;
 	int32_t filter_size = 0;
 	int32_t half_filter_size = 0;
 	int32_t ext_height = 0;
+	x265_ip_t *ip = NULL ;
 
-
+	ip = &enc_search->prediction.ip ;
 	width = x265_pattern_get_roi_width(pattern);
 	height = x265_pattern_get_roi_height(pattern);
 	src_stride  = x265_pattern_get_pattern_l_stride(pattern);
-	int_stride = x265_simage_get_stride(&enc_search->prediction.filtered_block_tmp[0]);
+	int_stride = x265_short_image_get_stride(&enc_search->prediction.filtered_block_tmp[0]);
 	dst_stride = x265_image_get_stride(&enc_search->prediction.filtered_block[0][0]);
 	filter_size = X265_NTAPS_LUMA;
 	half_filter_size = (filter_size >> 1);
@@ -3202,7 +3152,7 @@ void x265_enc_search_x_ext_dif_up_sampling_q(x265_t *h,
 
 	// horizontal filter 1/4
 	src_ptr = x265_pattern_get_roi_y(pattern) - half_filter_size * src_stride - 1;
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]);
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]);
 	if (half_pixel_ref->i_ver > 0)
 	{
 		src_ptr += src_stride;
@@ -3211,20 +3161,17 @@ void x265_enc_search_x_ext_dif_up_sampling_q(x265_t *h,
 	{
 		src_ptr += 1;
 	}
-	x265_interpolation_filter_filter_hor_luma_p_s(h,
-											&enc_search->prediction.interpolation_filter,
-											src_ptr,
-											src_stride,
-											int_ptr,
-											int_stride,
-											width,
-											ext_height,
-											1,
-											0);
+	ip->ip_filter_hor_luma_p_s[1](src_ptr,
+								src_stride,
+								int_ptr,
+								int_stride,
+								width,
+								ext_height,
+								h->param.sps.i_bit_depth_y) ;
 
 	// horizontal filter 3/4
 	src_ptr = x265_pattern_get_roi_y(pattern) - half_filter_size*src_stride - 1;
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]);
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]);
 	if (half_pixel_ref->i_ver > 0)
 	{
 		src_ptr += src_stride;
@@ -3233,128 +3180,101 @@ void x265_enc_search_x_ext_dif_up_sampling_q(x265_t *h,
 	{
 		src_ptr += 1;
 	}
-	x265_interpolation_filter_filter_hor_luma_p_s(h,
-											&enc_search->prediction.interpolation_filter,
-											src_ptr,
-											src_stride,
-											int_ptr,
-											int_stride,
-											width,
-											ext_height,
-											3,
-											0);
+	ip->ip_filter_hor_luma_p_s[3](src_ptr,
+								src_stride,
+								int_ptr,
+								int_stride,
+								width,
+								ext_height,
+								h->param.sps.i_bit_depth_y) ;
 
 	// generate @ 1,1
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]) + (half_filter_size-1) * int_stride;
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]) + (half_filter_size-1) * int_stride;
 	dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[1][1]);
 	if (half_pixel_ref->i_ver == 0)
 	{
 		int_ptr += int_stride;
 	}
-	x265_interpolation_filter_filter_ver_luma_s_p(h,
-											&enc_search->prediction.interpolation_filter,
-											int_ptr,
-											int_stride,
-											dst_ptr,
-											dst_stride,
-											width,
-											height,
-											1,
-											0,
-											1);
+	ip->ip_filter_ver_luma_s_p[1](int_ptr,
+								int_stride,
+								dst_ptr,
+								dst_stride,
+								width,
+								height,
+								h->param.sps.i_bit_depth_y) ;
 
 	// generate @ 3,1
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]) + (half_filter_size-1) * int_stride;
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]) + (half_filter_size-1) * int_stride;
 	dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[3][1]);
-	x265_interpolation_filter_filter_ver_luma_s_p(h,
-											&enc_search->prediction.interpolation_filter,
-											int_ptr,
-											int_stride,
-											dst_ptr,
-											dst_stride,
-											width,
-											height,
-											3,
-											0,
-											1);
+	ip->ip_filter_ver_luma_s_p[3](int_ptr,
+								int_stride,
+								dst_ptr,
+								dst_stride,
+								width,
+								height,
+								h->param.sps.i_bit_depth_y) ;
 
 	if (half_pixel_ref->i_ver != 0)
 	{
 		// generate @ 2,1
-		int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]) + (half_filter_size-1) * int_stride;
+		int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]) + (half_filter_size-1) * int_stride;
 		dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[2][1]);
 		if (half_pixel_ref->i_ver == 0)
 		{
 			int_ptr += int_stride;
 		}
-		x265_interpolation_filter_filter_ver_luma_s_p(h,
-												&enc_search->prediction.interpolation_filter,
-												int_ptr,
-												int_stride,
-												dst_ptr,
-												dst_stride,
-												width,
-												height,
-												2,
-												0,
-												1);
+		ip->ip_filter_ver_luma_s_p[2](int_ptr,
+									int_stride,
+									dst_ptr,
+									dst_stride,
+									width,
+									height,
+									h->param.sps.i_bit_depth_y) ;
 
 		// generate @ 2,3
-		int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]) + (half_filter_size-1) * int_stride;
+		int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]) + (half_filter_size-1) * int_stride;
 		dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[2][3]);
 		if (half_pixel_ref->i_ver == 0)
 		{
 			int_ptr += int_stride;
 		}
-		x265_interpolation_filter_filter_ver_luma_s_p(h,
-												&enc_search->prediction.interpolation_filter,
-												int_ptr,
-												int_stride,
-												dst_ptr,
-												dst_stride,
-												width,
-												height,
-												2,
-												0,
-												1);
+		ip->ip_filter_ver_luma_s_p[2](int_ptr,
+									int_stride,
+									dst_ptr,
+									dst_stride,
+									width,
+									height,
+									h->param.sps.i_bit_depth_y) ;
 	}
 	else
 	{
 		// generate @ 0,1
-		int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]) + half_filter_size * int_stride;
+		int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[1]) + half_filter_size * int_stride;
 		dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[0][1]);
-		x265_interpolation_filter_filter_ver_luma_s_p(h,
-												&enc_search->prediction.interpolation_filter,
-												int_ptr,
-												int_stride,
-												dst_ptr,
-												dst_stride,
-												width,
-												height,
-												0,
-												0,
-												1);
+		ip->ip_filter_ver_luma_s_p[0](int_ptr,
+									int_stride,
+									dst_ptr,
+									dst_stride,
+									width,
+									height,
+									h->param.sps.i_bit_depth_y) ;
 
 		// generate @ 0,3
-		int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]) + half_filter_size * int_stride;
+		int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]) + half_filter_size * int_stride;
 		dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[0][3]);
-		x265_interpolation_filter_filter_ver_luma_s_p(h,
-												&enc_search->prediction.interpolation_filter,
-												int_ptr,
-												int_stride,
-												dst_ptr,
-												dst_stride,
-												width,
-												height,
-												0,
-												0,
-												1);
+		ip->ip_filter_ver_luma_s_p[0](int_ptr,
+									int_stride,
+									dst_ptr,
+									dst_stride,
+									width,
+									height,
+									h->param.sps.i_bit_depth_y) ;
 	}
 
 	if (half_pixel_ref->i_hor != 0)
 	{
 		// generate @ 1,2
-		int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]) + (half_filter_size-1) * int_stride;
+		int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]) + (half_filter_size-1) * int_stride;
 		dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[1][2]);
 		if (half_pixel_ref->i_hor > 0)
 		{
@@ -3364,20 +3284,16 @@ void x265_enc_search_x_ext_dif_up_sampling_q(x265_t *h,
 		{
 			int_ptr += int_stride;
 		}
-		x265_interpolation_filter_filter_ver_luma_s_p(h,
-												&enc_search->prediction.interpolation_filter,
-												int_ptr,
-												int_stride,
-												dst_ptr,
-												dst_stride,
-												width,
-												height,
-												1,
-												0,
-												1);
+		ip->ip_filter_ver_luma_s_p[1](int_ptr,
+									int_stride,
+									dst_ptr,
+									dst_stride,
+									width,
+									height,
+									h->param.sps.i_bit_depth_y) ;
 
 		// generate @ 3,2
-		int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]) + (half_filter_size-1) * int_stride;
+		int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[2]) + (half_filter_size-1) * int_stride;
 		dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[3][2]);
 		if (half_pixel_ref->i_hor > 0)
 		{
@@ -3387,91 +3303,71 @@ void x265_enc_search_x_ext_dif_up_sampling_q(x265_t *h,
 		{
 			int_ptr += int_stride;
 		}
-		x265_interpolation_filter_filter_ver_luma_s_p(h,
-												&enc_search->prediction.interpolation_filter,
-												int_ptr,
-												int_stride,
-												dst_ptr,
-												dst_stride,
-												width,
-												height,
-												3,
-												0,
-												1);
+		ip->ip_filter_ver_luma_s_p[3](int_ptr,
+									int_stride,
+									dst_ptr,
+									dst_stride,
+									width,
+									height,
+									h->param.sps.i_bit_depth_y) ;
 	}
 	else
 	{
 		// generate @ 1,0
-		int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]) + (half_filter_size-1) * int_stride + 1;
+		int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]) + (half_filter_size-1) * int_stride + 1;
 		dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[1][0]);
 		if (half_pixel_ref->i_ver >= 0)
 		{
 			int_ptr += int_stride;
 		}
-		x265_interpolation_filter_filter_ver_luma_s_p(h,
-												&enc_search->prediction.interpolation_filter,
-												int_ptr,
-												int_stride,
-												dst_ptr,
-												dst_stride,
-												width,
-												height,
-												1,
-												0,
-												1);
+		ip->ip_filter_ver_luma_s_p[1](int_ptr,
+									int_stride,
+									dst_ptr,
+									dst_stride,
+									width,
+									height,
+									h->param.sps.i_bit_depth_y) ;
 
 		// generate @ 3,0
-		int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]) + (half_filter_size-1) * int_stride + 1;
+		int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[0]) + (half_filter_size-1) * int_stride + 1;
 		dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[3][0]);
 		if (half_pixel_ref->i_ver > 0)
 		{
 			int_ptr += int_stride;
 		}
-		x265_interpolation_filter_filter_ver_luma_s_p(h,
-												&enc_search->prediction.interpolation_filter,
-												int_ptr,
-												int_stride,
-												dst_ptr,
-												dst_stride,
-												width,
-												height,
-												3,
-												0,
-												1);
+		ip->ip_filter_ver_luma_s_p[3](int_ptr,
+									int_stride,
+									dst_ptr,
+									dst_stride,
+									width,
+									height,
+									h->param.sps.i_bit_depth_y) ;
 	}
 
 	// generate @ 1,3
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]) + (half_filter_size-1) * int_stride;
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]) + (half_filter_size-1) * int_stride;
 	dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[1][3]);
 	if (half_pixel_ref->i_ver == 0)
 	{
 		int_ptr += int_stride;
 	}
-	x265_interpolation_filter_filter_ver_luma_s_p(h,
-											&enc_search->prediction.interpolation_filter,
-											int_ptr,
-											int_stride,
-											dst_ptr,
-											dst_stride,
-											width,
-											height,
-											1,
-											0,
-											1);
+	ip->ip_filter_ver_luma_s_p[1](int_ptr,
+								int_stride,
+								dst_ptr,
+								dst_stride,
+								width,
+								height,
+								h->param.sps.i_bit_depth_y) ;
 
 	// generate @ 3,3
-	int_ptr = x265_simage_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]) + (half_filter_size-1) * int_stride;
+	int_ptr = x265_short_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block_tmp[3]) + (half_filter_size-1) * int_stride;
 	dst_ptr = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[3][3]);
-	x265_interpolation_filter_filter_ver_luma_s_p(h,
-											&enc_search->prediction.interpolation_filter,
-											int_ptr,
-											int_stride,
-											dst_ptr,
-											dst_stride,
-											width,
-											height,
-											3,
-											0,
-											1);
+	ip->ip_filter_ver_luma_s_p[3](int_ptr,
+								int_stride,
+								dst_ptr,
+								dst_stride,
+								width,
+								height,
+								h->param.sps.i_bit_depth_y) ;
 }
 

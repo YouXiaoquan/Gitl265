@@ -2,6 +2,9 @@
 
 #include "common.h"
 
+/** \file     sample_adaptive_offset.c
+    \brief    sample adaptive offset class
+*/
 
 x265_sample_adaptive_offset_class_static_t *p_sample_adaptive_offset_class_static ;
 
@@ -40,6 +43,7 @@ const Int TComSampleAdaptiveOffset::m_iNumClass[MAX_NUM_SAO_TYPE] =
 
 const UInt TComSampleAdaptiveOffset::m_uiMaxDepth = SAO_MAX_DEPTH;
  */
+
 int x265_sample_adaptive_offset_class_static_init ()
 {
 	CHECKED_MALLOCZERO( p_sample_adaptive_offset_class_static, sizeof(x265_sample_adaptive_offset_class_static_t) );
@@ -180,6 +184,9 @@ void x265_sample_adaptive_offset_deinit ( x265_sample_adaptive_offset_t *sample_
 
 }
 
+/** create SampleAdaptiveOffset memory.
+ * \param
+ */
 int x265_sample_adaptive_offset_create ( x265_t *h, x265_sample_adaptive_offset_t *sample_adaptive_offset )
 {
 	int32_t loop = 0;
@@ -331,6 +338,9 @@ fail:
 	return -1 ;
 }
 
+/** destroy SampleAdaptiveOffset memory.
+ * \param
+ */
 void x265_sample_adaptive_offset_destroy ( x265_t *h,
 											x265_sample_adaptive_offset_t *sample_adaptive_offset )
 {
@@ -401,6 +411,9 @@ void x265_sample_adaptive_offset_destroy ( x265_t *h,
 	sample_adaptive_offset->luma_table_bo = NULL ;
 }
 
+/** allocate memory for SAO parameters
+ * \param    *sao_param
+ */
 int x265_sample_adaptive_offset_alloc_sao_param ( x265_t *h,
 													x265_sample_adaptive_offset_t *sample_adaptive_offset,
 													x265_sao_param_t *sao_param )
@@ -425,7 +438,9 @@ fail:
 	return -1 ;
 }
 
-
+/** free memory of SAO parameters
+ * \param   sao_param
+ */
 void x265_sample_adaptive_offset_free_sao_param ( x265_sample_adaptive_offset_t *sample_adaptive_offset,
 												x265_sao_param_t *sao_param )
 {
@@ -438,6 +453,9 @@ void x265_sample_adaptive_offset_free_sao_param ( x265_sample_adaptive_offset_t 
 	sao_param->sao_lcu_param[2] = NULL ;
 }
 
+/** reset SAO parameters
+ * \param   pcSaoParam
+ */
 void x265_sample_adaptive_offset_reset_sao_param(x265_sample_adaptive_offset_t *sample_adaptive_offset,
 												x265_sao_param_t *sao_param)
 {

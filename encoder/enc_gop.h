@@ -4,6 +4,9 @@
 #ifndef X265_ENC_GOP_H
 #define X265_ENC_GOP_H
 
+/** \file     enc_gop.h
+    \brief    GOP encoder class (header)
+*/
 
 #include "enc_analyze.h"
 

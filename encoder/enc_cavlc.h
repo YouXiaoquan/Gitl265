@@ -3,6 +3,9 @@
 #ifndef X265_ENCODER_CAVLC_H
 #define X265_ENCODER_CAVLC_H
 
+/** \file     enc_cavlc.h
+    \brief    CAVLC encoder class (header)
+*/
 
 typedef struct
 {

@@ -74,13 +74,13 @@ void x265_image_copy_part_to_part_chroma( x265_t *h, x265_image_t *image, x265_i
 void x265_image_copy_part_to_part_chroma_p7( x265_t *h, x265_image_t *image, x265_image_t* image_dst, uint32_t i_part_idx, uint32_t i_width, uint32_t i_height, uint32_t chroma_id) ;
 
 
-void x265_image_add_clip( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_simage_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size ) ;
-void x265_image_add_clip_luma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_simage_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size ) ;
-void x265_image_add_clip_chroma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_simage_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size ) ;
+void x265_image_add_clip( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_short_image_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size ) ;
+void x265_image_add_clip_luma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_short_image_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size ) ;
+void x265_image_add_clip_chroma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_short_image_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size ) ;
 void x265_image_subtract( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_image_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size ) ;
 void x265_image_subtract_luma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_image_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size ) ;
 void x265_image_subtract_chroma( x265_t *h, x265_image_t *image, x265_image_t* image_src0, x265_image_t* image_src1, uint32_t i_tr_unit_idx, uint32_t i_part_size ) ;
-void x265_image_add_avg( x265_t *h, x265_image_t *image, x265_simage_t* image_src0, x265_simage_t* image_src1, uint32_t i_part_unit_idx, uint32_t i_width, uint32_t i_height ) ;
+void x265_image_add_avg( x265_t *h, x265_image_t *image, x265_short_image_t* image_src0, x265_short_image_t* image_src1, uint32_t i_part_unit_idx, uint32_t i_width, uint32_t i_height ) ;
 void x265_image_remove_high_freq( x265_t *h, x265_image_t *image, x265_image_t* image_src, uint32_t i_part_idx, uint32_t i_widht, uint32_t i_height ) ;
 
 

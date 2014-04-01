@@ -75,32 +75,9 @@ cglobal %1, 0, 7
 
 	MOV I, 0
 %%x265_rdoq_ssse3_level_i1:
-	MOVDQA XMM2, [temp_src_coef]
-	PABSD XMM2, XMM2
-	MOVD r0, XMM2
-	IMUL r0, [temp_q_coef]
-	MOVD XMM0, r0
-
-	PSRLDQ XMM2, 4
-	MOVD r0, XMM2
-	IMUL r0, [temp_q_coef+4]
-	MOVD XMM1, r0
-	PSLLDQ XMM1, 4
-	PADDD XMM0, XMM1
-
-	PSRLDQ XMM2, 4
-	MOVD r0, XMM2
-	IMUL r0, [temp_q_coef+8]
-	MOVD XMM1, r0
-	PSLLDQ XMM1, 8
-	PADDD XMM0, XMM1
-
-	PSRLDQ XMM2, 4
-	MOVD r0, XMM2
-	IMUL r0, [temp_q_coef+12]
-	MOVD XMM1, r0
-	PSLLDQ XMM1, 12
-	PADDD XMM0, XMM1
+	MOVDQA XMM0, [temp_src_coef]
+	PABSD XMM0, XMM0
+	PMADDWD XMM0, [temp_q_coef]
 
 	MOVDQA [temp_level_double], XMM0
 	MOVDQA XMM1, XMM0

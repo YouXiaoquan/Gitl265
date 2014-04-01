@@ -1,6 +1,10 @@
 
 #include "common.h"
 
+/** \file     slice.c
+    \brief    slice header and SPS class
+*/
+
 x265_slice_t *x265_slice_new ( x265_t *h )
 {
 	x265_slice_t *slice = NULL ;
@@ -132,6 +136,24 @@ void x265_slice_init_equal_ref ( x265_slice_t *slice )
 	}
 }
 
+/** Function for marking the reference pictures when an IDR/CRA/CRANT/BLA/BLANT is encountered.
+ * \param p_poc_cra POC of the CRA/CRANT/BLA/BLANT picture
+ * \param p_refresh_pending flag indicating if a deferred decoding refresh is pending
+ *
+ * This function marks the reference pictures as "unused for reference" in the following conditions.
+ * If the nal_unit_type is IDR/BLA/BLANT, all pictures in the reference picture list
+ * are marked as "unused for reference"
+ *    If the nal_unit_type is BLA/BLANT, set the pocCRA to the temporal reference of the current picture.
+ * Otherwise
+ *    If the bRefreshPending flag is true (a deferred decoding refresh is pending) and the current
+ *    temporal reference is greater than the temporal reference of the latest CRA/CRANT/BLA/BLANT picture (pocCRA),
+ *    mark all reference pictures except the latest CRA/CRANT/BLA/BLANT picture as "unused for reference" and set
+ *    the bRefreshPending flag to false.
+ *    If the nal_unit_type is CRA/CRANT, set the bRefreshPending flag to true and pocCRA to the temporal
+ *    reference of the current picture.
+ * Note that the current picture is already placed in the reference list and its marking is not changed.
+ * If the current picture has a nal_ref_idc that is not 0, it will remain marked as "used for reference".
+ */
 void x265_slice_decoding_refresh_marking ( x265_t *h, x265_slice_t *slice,
 		int32_t * p_poc_cra, int32_t *p_refresh_pending )
 {
@@ -217,6 +239,8 @@ void x265_slice_select_reference_picture_set ( x265_t *h, x265_slice_t* slice,
 	slice->rps->i_number_of_pictures = slice->rps->i_number_of_negative_pictures + slice->rps->i_number_of_positive_pictures ;
 }
 
+/** Function for applying picture marking based on the Reference Picture Set in pReferencePictureSet.
+*/
 int x265_slice_check_that_all_ref_pics_are_available ( x265_t *h, x265_slice_t *slice,
 		x265_reference_picture_set_t *rps, int32_t b_print_errors, int32_t i_poc_random_access )
 {
@@ -372,6 +396,8 @@ int x265_slice_check_that_all_ref_pics_are_available ( x265_t *h, x265_slice_t *
 	return 0;
 }
 
+/** Function for constructing an explicit Reference Picture Set out of the available pictures in a referenced Reference Picture Set
+*/
 void x265_slice_create_explicit_reference_picture_set_from_reference (
 		x265_t *h, x265_slice_t *slice,
 		x265_reference_picture_set_t *reference_picture_set )
@@ -466,7 +492,8 @@ void x265_slice_create_explicit_reference_picture_set_from_reference (
 	slice->i_rps_idx = -1 ;
 }
 
-
+/** Function for applying picture marking based on the Reference Picture Set in pReferencePictureSet.
+*/
 void x265_slice_apply_reference_picture_set ( x265_t *h, x265_slice_t *slice,
 								x265_reference_picture_set_t *rps )
 {
@@ -542,6 +569,8 @@ void x265_slice_apply_reference_picture_set ( x265_t *h, x265_slice_t *slice,
 	}
 }
 
+/** Function for checking if this is a switching-point
+*/
 int32_t x265_slice_is_temporal_layer_switching_point ( x265_t *h, x265_slice_t *slice )
 {
 	int32_t i_index = 0 ;
@@ -560,6 +589,8 @@ int32_t x265_slice_is_temporal_layer_switching_point ( x265_t *h, x265_slice_t *
 	return 1 ;
 }
 
+/** Function for checking if this is a STSA candidate
+ */
 int32_t x265_slice_is_stepwise_temporal_layer_switching_point_candidate ( x265_t *h, x265_slice_t *slice )
 {
 	int32_t i_index = 0 ;
@@ -955,6 +986,11 @@ void x265_slice_setLambda ( x265_slice_t* slice, double f_lambda )
 
 #endif
 
+/**
+ - allocate table to contain substream sizes to be written to the slice header.
+ .
+ \param i_num_substreams Number of substreams -- the allocation will be this value - 1.
+ */
 int x265_slice_alloc_substream_sizes ( x265_slice_t *slice, uint32_t i_num_substreams )
 {
 	x265_free ( slice->substream_sizes ) ;

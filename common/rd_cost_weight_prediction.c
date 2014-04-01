@@ -2,7 +2,9 @@
 
 #include "common.h"
 
-
+/** \file     rd_cost_weight_prediction.c
+    \brief    RD cost computation class with Weighted-Prediction
+*/
 
 x265_rd_cost_weight_prediction_class_static_t *rd_cost_weight_prediction_class_static ;
 
@@ -52,6 +54,13 @@ void x_set_wp_scale
 	rd_cost_weight_prediction->b_x_set_done = 1 ;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// SAD
+// --------------------------------------------------------------------------------------------------------------------
+/** get weighted SAD cost
+ * \param dist_param
+ * \returns uint32
+ */
 uint32_t x_get_sadw( x265_rd_cost_weight_prediction_t  *rd_cost_weight_prediction, x265_dist_param_t* dist_param )
 {
 	pixel i_pred;

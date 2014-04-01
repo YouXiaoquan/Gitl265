@@ -1,6 +1,10 @@
 
 #include "common/common.h"
 
+/** \file     enc_entropy.cpp
+    \brief    entropy encoder class
+*/
+
 uint32_t pu_offset[8] = { 0, 8, 4, 4, 2, 10, 1, 5};
 
 void x265_enc_entropy_set_bitstream ( x265_enc_entropy_t *enc_entropy,
@@ -210,6 +214,11 @@ void x265_enc_entropy_encode_skip_flag(x265_t* h,
 												i_abs_part_idx ) ;
 }
 
+/** encode merge flag
+ * \param cu
+ * \param i_abs_part_idx
+ * \returns Void
+ */
 void x265_enc_entropy_encode_merge_flag(x265_t* h,
 										x265_enc_entropy_t *enc_entropy,
 										x265_data_cu_t *cu,
@@ -221,6 +230,13 @@ void x265_enc_entropy_encode_merge_flag(x265_t* h,
 													i_abs_part_idx ) ;
 }
 
+/** encode merge index
+ * \param cu
+ * \param i_abs_part_idx
+ * \param uiPUIdx
+ * \param b_rd
+ * \returns Void
+ */
 void x265_enc_entropy_encode_merge_index(x265_t* h,
 										x265_enc_entropy_t *enc_entropy,
 										x265_data_cu_t *cu,
@@ -238,7 +254,12 @@ void x265_enc_entropy_encode_merge_index(x265_t* h,
 													i_abs_part_idx ) ;
 }
 
-
+/** encode prediction mode
+ * \param cu
+ * \param i_abs_part_idx
+ * \param b_rd
+ * \returns Void
+ */
 void x265_enc_entropy_encode_pred_mode(x265_t *h,
 										x265_enc_entropy_t *enc_entropy,
 										x265_data_cu_t *cu,
@@ -278,6 +299,13 @@ void x265_enc_entropy_encode_split_flag(x265_t* h,
 													i_depth ) ;
 }
 
+/** encode partition size
+ * \param cu
+ * \param i_abs_part_idx
+ * \param i_depth
+ * \param b_rd
+ * \returns Void
+ */
 void x265_enc_entropy_encode_part_size(x265_t* h,
 										x265_enc_entropy_t *enc_entropy,
 										x265_data_cu_t *cu,
@@ -297,6 +325,12 @@ void x265_enc_entropy_encode_part_size(x265_t* h,
 												i_depth ) ;
 }
 
+/** Encode I_PCM information.
+ * \param cu pointer to CU
+ * \param i_abs_part_idx CU index
+ * \param b_rd flag indicating estimation or encoding
+ * \returns Void
+ */
 void x265_enc_entropy_encode_ipcm_info(x265_t* h,
 										x265_enc_entropy_t *enc_entropy,
 										x265_data_cu_t *cu,
@@ -624,7 +658,12 @@ void x265_enc_entropy_encode_pred_info(x265_t *h,
 	}
 }
 
-
+/** encode motion information for every PU block
+ * \param cu
+ * \param i_abs_part_idx
+ * \param b_rd
+ * \returns Void
+ */
 void x265_enc_entropy_encode_pu_wise(x265_t *h,
 									x265_enc_entropy_t *enc_entropy,
 									x265_data_cu_t* cu,
@@ -699,7 +738,12 @@ void x265_enc_entropy_encode_inter_dir_pu(x265_t *h,
 	return;
 }
 
-
+/** encode reference frame index for a PU block
+ * \param cu
+ * \param i_abs_part_idx
+ * \param i_ref_pic_list
+ * \returns Void
+ */
 void x265_enc_entropy_encode_ref_frm_idx_pu(x265_t *h,
 											x265_enc_entropy_t *enc_entropy,
 											x265_data_cu_t* cu,
@@ -726,7 +770,12 @@ void x265_enc_entropy_encode_ref_frm_idx_pu(x265_t *h,
     return;
 }
 
-
+/** encode motion vector difference for a PU block
+ * \param cu
+ * \param i_abs_part_idx
+ * \param i_ref_pic_list
+ * \returns Void
+ */
 void x265_enc_entropy_encode_mvd_pu(x265_t *h,
 									x265_enc_entropy_t *enc_entropy,
 									x265_data_cu_t* cu,
@@ -832,6 +881,14 @@ void x265_enc_entropy_encode_qp(x265_t *h,
 	}
 }
 
+// texture
+/** encode coefficients
+ * \param cu
+ * \param i_abs_part_idx
+ * \param i_depth
+ * \param i_width
+ * \param i_height
+ */
 void x265_enc_entropy_encode_coeff( x265_t *h,
 									x265_enc_entropy_t *enc_entropy,
 									x265_data_cu_t* cu,
@@ -917,6 +974,9 @@ void x265_enc_entropy_estimate_bit (x265_t *h,
 											i_text_type );
 }
 
+/** Encode SAO Offset
+ * \param  sao_lcu_param SAO LCU paramters
+ */
 void x265_enc_entropy_encode_sao_offset ( x265_t *h,
 										x265_enc_entropy_t *enc_entropy,
 										x265_sao_lcu_param_t *sao_lcu_param,
@@ -977,7 +1037,15 @@ void x265_enc_entropy_encode_sao_offset ( x265_t *h,
 	}
 }
 
-
+/** Encode SAO unit interleaving
+* \param  rx
+* \param  ry
+* \param  sao_lcu_param
+* \param  pcCU
+* \param  cu_addr_in_slice
+* \param  cu_addr_up_in_slice
+* \param  bLFCrossSliceBoundaryFlag
+ */
 void x265_enc_entropy_encode_sao_unit_interleaving ( x265_t *h,
 													x265_enc_entropy_t *enc_entropy,
 													int32_t comp_idx,
@@ -1036,6 +1104,9 @@ int32_t x265_enc_entropy_count_non_zero_coeffs(x265_enc_entropy_t *enc_entropy,
 	return i_count;
 }
 
+/** encode quantization matrix
+ * \param scaling_list quantization matrix information
+ */
 void x265_enc_entropy_encode_scaling_list(x265_t *h,
 										x265_enc_entropy_t *enc_entropy,
 										x265_scaling_list_t* scaling_list )

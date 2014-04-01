@@ -239,8 +239,8 @@ int x265_enc_search_initialize ( x265_t *h,
 						i_num_partitions * sizeof(uint8_t)) ;
 	CHECKED_MALLOCZERO(enc_search->ppc_qt_temp_image,
 						i_num_layers_allocated * sizeof(x265_image_t*)) ;
-	CHECKED_MALLOCZERO(enc_search->ppc_qt_temp_simage,
-						i_num_layers_allocated * sizeof(x265_simage_t*)) ;
+	CHECKED_MALLOCZERO(enc_search->ppc_qt_temp_short_image,
+						i_num_layers_allocated * sizeof(x265_short_image_t*)) ;
 	for( loop = 0; loop < i_num_layers_allocated; ++loop )
 	{
 		CHECKED_MALLOCZERO(enc_search->ppc_qt_temp_coeff_y[loop],
@@ -274,12 +274,12 @@ int x265_enc_search_initialize ( x265_t *h,
 		{
 			goto fail ;
 		}
-		enc_search->ppc_qt_temp_simage[loop] = x265_simage_new () ;
-		if ( NULL == enc_search->ppc_qt_temp_simage[loop] )
+		enc_search->ppc_qt_temp_short_image[loop] = x265_short_image_new () ;
+		if ( NULL == enc_search->ppc_qt_temp_short_image[loop] )
 		{
 			goto fail ;
 		}
-		if ( x265_simage_create ( enc_search->ppc_qt_temp_simage[loop],
+		if ( x265_short_image_create ( enc_search->ppc_qt_temp_short_image[loop],
 		                         h->cu.pic.i_max_cu_width,
 		                         h->cu.pic.i_max_cu_height ) )
 		{
@@ -379,6 +379,8 @@ void x265_enc_search_deinitialize ( x265_t *h, x265_enc_search_t *enc_search )
 			x265_free ( enc_search->ppc_qt_temp_coeff_cr ) ;
 			enc_search->ppc_qt_temp_coeff_cr = NULL ;
 		}
+
+#if X265_ADAPTIVE_QP_SELECTION
 		if ( enc_search->ppc_qt_temp_arl_coeff_y )
 		{
 			for( loop = 0 ; loop < i_num_layers_allocated ; ++ loop )
@@ -409,6 +411,7 @@ void x265_enc_search_deinitialize ( x265_t *h, x265_enc_search_t *enc_search )
 			x265_free ( enc_search->ppc_qt_temp_arl_coeff_cr ) ;
 			enc_search->ppc_qt_temp_arl_coeff_cr = NULL ;
 		}
+#endif
 
 		if ( enc_search->ppc_qt_temp_image )
 		{
@@ -424,19 +427,19 @@ void x265_enc_search_deinitialize ( x265_t *h, x265_enc_search_t *enc_search )
 			x265_free ( enc_search->ppc_qt_temp_image ) ;
 			enc_search->ppc_qt_temp_image = NULL ;
 		}
-		if ( enc_search->ppc_qt_temp_simage )
+		if ( enc_search->ppc_qt_temp_short_image )
 		{
 			for( loop = 0 ; loop < i_num_layers_allocated ; ++ loop )
 			{
-				if ( enc_search->ppc_qt_temp_simage[loop] )
+				if ( enc_search->ppc_qt_temp_short_image[loop] )
 				{
-					x265_simage_destroy ( enc_search->ppc_qt_temp_simage[loop] ) ;
-					x265_simage_delete ( enc_search->ppc_qt_temp_simage[loop] ) ;
-					enc_search->ppc_qt_temp_simage[loop] = NULL ;
+					x265_short_image_destroy ( enc_search->ppc_qt_temp_short_image[loop] ) ;
+					x265_short_image_delete ( enc_search->ppc_qt_temp_short_image[loop] ) ;
+					enc_search->ppc_qt_temp_short_image[loop] = NULL ;
 				}
 			}
-			x265_free ( enc_search->ppc_qt_temp_simage ) ;
-			enc_search->ppc_qt_temp_simage = NULL ;
+			x265_free ( enc_search->ppc_qt_temp_short_image ) ;
+			enc_search->ppc_qt_temp_short_image = NULL ;
 		}
 		x265_free ( enc_search->pc_qt_temp_coeff_y ) ;
 		x265_free ( enc_search->pc_qt_temp_coeff_cb ) ;
@@ -897,7 +900,7 @@ void x265_enc_search_x_intra_coding_luma_blk(x265_t* h,
 											uint32_t i_abs_part_idx,
 											x265_image_t *p_org_image,
 											x265_image_t *p_pred_image,
-											x265_simage_t *p_resi_image,
+											x265_short_image_t *p_resi_image,
 											uint32_t *p_dist,
 											int32_t b_default0_save1_load2 )
 {
@@ -908,7 +911,7 @@ void x265_enc_search_x_intra_coding_luma_blk(x265_t* h,
 	uint32_t i_stride= 0;
 	pixel *org = NULL;
 	pixel *pred = NULL;
-	spixel *resi = NULL;
+	short_pixel *resi = NULL;
 	pixel *reco = NULL;
 
 	uint32_t i_log2_tr_size = 0;
@@ -924,6 +927,7 @@ void x265_enc_search_x_intra_coding_luma_blk(x265_t* h,
 	pixel *rec_ipred = NULL;
 	uint32_t i_rec_ipred_stride = 0;
 	int32_t b_use_transform_skip = 0;
+	//===== init availability pattern =====
 	int32_t b_above_avail = 0;
 	int32_t b_left_avail  = 0;
 	pixel *p_pred = NULL;
@@ -932,13 +936,16 @@ void x265_enc_search_x_intra_coding_luma_blk(x265_t* h,
 	uint32_t i_y = 0;
 	uint32_t i_x = 0;
 	pixel *p_org = NULL;
-	spixel *p_resi = NULL;
+	short_pixel *p_resi = NULL;
 	pixel *p_reco = NULL;
 	pixel *p_rec_qt = NULL;
 	pixel *p_rec_ipred = NULL;
 	uint32_t i_abs_sum = 0;
 	int32_t i_scaling_list_type = 0 ;
+	int32_t i_partition = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
 
+	rd_cost = &h->rd_cost ;
 	i_luma_pred_mode = x265_base_data_cu_get_luma_intra_dir_p2((x265_base_data_cu_t*)cu,  i_abs_part_idx );
 	i_full_depth  = x265_base_data_cu_get_depth_p2((x265_base_data_cu_t*)cu,  0 )  + i_tr_depth;
 	i_width = x265_data_cu_get_width_p2(cu,  0 ) >> i_tr_depth;
@@ -946,7 +953,7 @@ void x265_enc_search_x_intra_coding_luma_blk(x265_t* h,
 	i_stride = x265_image_get_stride(p_org_image);
 	org = x265_image_get_luma_addr_p3(h, p_org_image, i_abs_part_idx );
 	pred = x265_image_get_luma_addr_p3(h, p_pred_image, i_abs_part_idx );
-	resi = x265_simage_get_luma_addr_p3(h, p_resi_image, i_abs_part_idx );
+	resi = x265_short_image_get_luma_addr_p3(h, p_resi_image, i_abs_part_idx );
 	reco = x265_image_get_luma_addr_p3(h, p_pred_image, i_abs_part_idx );
 
 	i_log2_tr_size = h->global.convert_to_bit[h->sps[0].i_max_cu_width >> i_full_depth ] + 2;
@@ -1124,7 +1131,7 @@ void x265_enc_search_x_intra_coding_luma_blk(x265_t* h,
 		memset( coeff, 0, sizeof( x265_coeff_t ) * i_width * i_height );
 		for( i_y = 0; i_y < i_height; i_y++ )
 		{
-			memset( p_resi, 0, sizeof( spixel ) * i_width );
+			memset( p_resi, 0, sizeof( short_pixel ) * i_width );
 			p_resi += i_stride;
 		}
 	}
@@ -1152,20 +1159,8 @@ void x265_enc_search_x_intra_coding_luma_blk(x265_t* h,
 	}
 
 	//===== update distortion =====
-	*p_dist += x265_rd_cost_get_dist_part(h,
-										&h->rd_cost,
-										h->cu.pic.i_bit_depth_y,
-										reco,
-										i_stride,
-										org,
-										i_stride,
-										i_width,
-										i_height,
-										TEXT_LUMA,
-										DF_SSE );
-
-
-
+	i_partition = PartitionFromSizes(i_width, i_height) ;
+	*p_dist += rd_cost->sse_p_p_func[i_partition](reco, i_stride, org, i_stride, h->cu.pic.i_bit_depth_y) ;
 	//	print_int_state ( *p_dist ) ;
 }
 
@@ -1176,7 +1171,7 @@ void x265_enc_search_x_intra_coding_chroma_blk( x265_t *h,
 												uint32_t i_abs_part_idx,
 												x265_image_t *p_org_image,
 												x265_image_t *p_pred_image,
-												x265_simage_t *p_resi_image,
+												x265_short_image_t *p_resi_image,
 												uint32_t *p_dist,
 												uint32_t i_chroma_id,
 												int32_t b_default0_save1_load2 )
@@ -1193,7 +1188,7 @@ void x265_enc_search_x_intra_coding_chroma_blk( x265_t *h,
 	uint32_t i_stride = 0;
 	pixel *org = NULL;
 	pixel *pred = NULL;
-	spixel *resi = NULL;
+	short_pixel *resi = NULL;
 	pixel *reco = NULL;
 	uint32_t i_qt_layer = 0;
 	uint32_t i_num_coeff_per_inc  = 0;
@@ -1216,14 +1211,17 @@ void x265_enc_search_x_intra_coding_chroma_blk( x265_t *h,
 	uint32_t i_y = 0;
 	uint32_t i_x = 0;
 	pixel *p_org = NULL;
-	spixel *p_resi = NULL;
+	short_pixel *p_resi = NULL;
 	uint32_t i_abs_sum = 0;
 	int32_t i_cur_chroma_qp_offset = 0;
 	int32_t i_scaling_list_type = 0;
 	pixel *p_reco = NULL;
 	pixel *p_rec_qt = NULL;
 	pixel *p_rec_ipred = NULL;
+	int32_t i_partition = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
 
+	rd_cost = &h->rd_cost ;
 	i_org_tr_depth = i_tr_depth;
 	i_full_depth  = x265_base_data_cu_get_depth_p2((x265_base_data_cu_t*)cu,  0 ) + i_tr_depth;
 	i_log2_tr_size = h->global.convert_to_bit[h->sps[0].i_max_cu_width >> i_full_depth] + 2;
@@ -1247,7 +1245,7 @@ void x265_enc_search_x_intra_coding_chroma_blk( x265_t *h,
 	i_stride = x265_image_get_c_stride (p_org_image);
 	org = ( i_chroma_id > 0 ? x265_image_get_cr_addr_p3(h, p_org_image, i_abs_part_idx ) : x265_image_get_cb_addr_p3(h, p_org_image, i_abs_part_idx ) );
 	pred = ( i_chroma_id > 0 ? x265_image_get_cr_addr_p3(h, p_pred_image, i_abs_part_idx ) : x265_image_get_cb_addr_p3(h, p_pred_image, i_abs_part_idx ) );
-	resi = ( i_chroma_id > 0 ? x265_simage_get_cr_addr_p3(h, p_resi_image, i_abs_part_idx ) : x265_simage_get_cb_addr_p3(h, p_resi_image, i_abs_part_idx ) );
+	resi = ( i_chroma_id > 0 ? x265_short_image_get_cr_addr_p3(h, p_resi_image, i_abs_part_idx ) : x265_short_image_get_cb_addr_p3(h, p_resi_image, i_abs_part_idx ) );
 	reco = ( i_chroma_id > 0 ? x265_image_get_cr_addr_p3(h, p_pred_image, i_abs_part_idx ) : x265_image_get_cb_addr_p3(h, p_pred_image, i_abs_part_idx ) );
 	i_qt_layer = h->sps[0].i_quadtree_tu_log2_max_size - i_log2_tr_size;
 	i_num_coeff_per_inc = (h->sps[0].i_max_cu_width * h->sps[0].i_max_cu_height >> ( h->sps[0].i_max_cu_depth << 1 ) ) >> 2;
@@ -1446,7 +1444,7 @@ void x265_enc_search_x_intra_coding_chroma_blk( x265_t *h,
 		memset( coeff, 0, sizeof( x265_coeff_t ) * i_width * i_height );
 		for( i_y = 0; i_y < i_height; i_y++ )
 		{
-			memset( p_resi, 0, sizeof( spixel ) * i_width );
+			memset( p_resi, 0, sizeof( short_pixel ) * i_width );
 			p_resi += i_stride;
 		}
 	}
@@ -1475,34 +1473,26 @@ void x265_enc_search_x_intra_coding_chroma_blk( x265_t *h,
 		}
 	}
 
+	i_partition = PartitionFromSizes(i_width, i_height) ;
 	//===== update distortion =====
 #if X265_WEIGHTED_CHROMA_DISTORTION
-	*p_dist += x265_rd_cost_get_dist_part(h,
-										&h->rd_cost,
-										h->cu.pic.i_bit_depth_c,
-										reco,
-										i_stride,
-										org,
-										i_stride,
-										i_width,
-										i_height,
-										i_text_type,
-										DF_SSE );
+	if (i_text_type == TEXT_LUMA)
+	{
+		*p_dist += rd_cost->sse_p_p_func[i_partition](reco, i_stride, org, i_stride, h->cu.pic.i_bit_depth_y) ;
+	}
+	else if (i_text_type == TEXT_CHROMA_U)
+	{
+		*p_dist += rd_cost->f_cb_distortion_weight
+				* rd_cost->sse_p_p_func[i_partition](reco, i_stride, org, i_stride, h->cu.pic.i_bit_depth_c) ;
+	}
+	else
+	{
+		*p_dist += rd_cost->f_cr_distortion_weight
+				* rd_cost->sse_p_p_func[i_partition](reco, i_stride, org, i_stride, h->cu.pic.i_bit_depth_c) ;
+	}
 #else
-	*p_dist += x265_rd_cost_get_dist_part(h,
-										&h->rd_cost,
-										h->cu.pic.i_bit_depth_c,
-										reco,
-										i_stride,
-										org,
-										i_stride,
-										i_width,
-										i_height,
-										TEXT_LUMA,
-										DF_SSE );
+	*p_dist += rd_cost->sse_p_p_func[i_partition](reco, i_stride, org, i_stride, h->cu.pic.i_bit_depth_c) ;
 #endif
-
-
 }
 
 
@@ -1515,7 +1505,7 @@ void x265_enc_search_x_recur_intra_coding_qt(x265_t *h,
 											int32_t b_luma_only,
 											x265_image_t *p_org_image,
 											x265_image_t *p_pred_image,
-											x265_simage_t *p_resi_image,
+											x265_short_image_t *p_resi_image,
 											uint32_t *p_dist_y,
 											uint32_t *p_dist_c,
 #if X265_HHI_RQT_INTRA_SPEEDUP
@@ -2793,7 +2783,7 @@ void x265_enc_search_x_recur_intra_chroma_coding_qt(x265_t *h,
 													uint32_t i_abs_part_idx,
 													x265_image_t *p_org_image,
 													x265_image_t *p_pred_image,
-													x265_simage_t *p_resi_image,
+													x265_short_image_t *p_resi_image,
 													uint32_t *p_dist )
 {
 	uint32_t i_full_depth = 0;
@@ -3186,8 +3176,9 @@ void x265_enc_search_preest_chroma_pred_mode ( x265_t *h,
 	uint32_t i_mode  = 0;
 	uint32_t i_sad = 0;
 	int32_t i_partition = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
 
-
+	rd_cost = &h->rd_cost ;
 	i_width = x265_data_cu_get_width_p2(cu,  0 ) >> 1;
 	i_height = x265_data_cu_get_height_p2(cu,  0 ) >> 1;
 	i_stride = x265_image_get_c_stride(p_org_image);
@@ -3248,14 +3239,15 @@ void x265_enc_search_preest_chroma_pred_mode ( x265_t *h,
 
 		//--- get sad ---
 		i_partition = PartitionFromSizes(i_width, i_height) ;
-		i_sad = h->rd_cost.satd.satd_func[i_partition](p_pred_u,
-														i_stride,
-														p_org_u,
-														i_stride);
-		i_sad += h->rd_cost.satd.satd_func[i_partition](p_pred_v,
-														i_stride,
-														p_org_v,
-														i_stride);
+		i_sad = rd_cost->satd_func[i_partition](p_pred_u,
+												i_stride,
+												p_org_u,
+												i_stride);
+		i_sad += rd_cost->satd_func[i_partition](p_pred_v,
+												i_stride,
+												p_org_v,
+												i_stride);
+
 		//--- check ---
 		if( i_sad < i_min_sad )
 		{
@@ -3280,7 +3272,7 @@ void x265_enc_search_est_intra_pred_qt ( x265_t *h,
 										x265_data_cu_t *cu,
 										x265_image_t *p_org_image,
 										x265_image_t *p_pred_image,
-										x265_simage_t *p_resi_image,
+										x265_short_image_t *p_resi_image,
 										x265_image_t *p_reco_image,
 										uint32_t *p_dist_c,
 										int32_t b_luma_only )
@@ -3363,8 +3355,9 @@ void x265_enc_search_est_intra_pred_qt ( x265_t *h,
 	double f_best_pu_cost = 0;
 	double cand_cost_list[ X265_FAST_UDI_MAX_RDMODE_NUM ];
 	int32_t i_partition = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
 
-
+	rd_cost = &h->rd_cost ;
 	i_depth = x265_base_data_cu_get_depth_p2((x265_base_data_cu_t*)cu, 0);
 	i_num_pu = x265_data_cu_get_num_part_inter(cu);
 	i_init_tr_depth = x265_data_cu_get_partition_size_p2(cu, 0) == SIZE_2Nx2N ? 0 : 1;
@@ -3448,10 +3441,10 @@ void x265_enc_search_est_intra_pred_qt ( x265_t *h,
 
 				// use hadamard transform here
 				i_partition = PartitionFromSizes(i_width, i_height) ;
-				i_sad = h->rd_cost.satd.satd_func[i_partition](p_pred,
-																i_stride,
-																p_org,
-																i_stride);
+				i_sad = rd_cost->satd_func[i_partition](p_pred,
+														i_stride,
+														p_org,
+														i_stride);
 				//	print_int_state (i_sad) ;
 
 				i_mode_bits = x265_enc_search_x_mode_bits_intra(h,
@@ -3840,7 +3833,7 @@ void x265_enc_search_est_intra_pred_chroma_qt( x265_t *h,
 												x265_data_cu_t *cu,
 												x265_image_t *p_org_image,
 												x265_image_t *p_pred_image,
-												x265_simage_t *p_resi_image,
+												x265_short_image_t *p_resi_image,
 												x265_image_t *p_reco_image,
 												uint32_t *p_pre_calc_dist_c )
 {

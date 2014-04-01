@@ -4,7 +4,9 @@
 #ifndef X265_LOOP_FILTER_H
 #define X265_LOOP_FILTER_H
 
-
+/** \file     loop_filter.h
+    \brief    deblocking filter (header)
+*/
 
 #define X265_DEBLOCK_SMALLEST_BLOCK  8
 
@@ -20,6 +22,7 @@ typedef struct
 
 } x265_loop_filter_t ;
 
+/// CU-level deblocking function
 void x265_loop_filter_x_deblock_cu_ver(x265_t *h,
 										x265_loop_filter_t *loop_filter,
 										x265_data_cu_t *cu,
@@ -30,6 +33,7 @@ void x265_loop_filter_x_deblock_cu_hor(x265_t *h,
 										x265_data_cu_t *cu,
 										uint32_t i_abs_zorder_idx,
 										uint32_t i_depth ) ;
+
 void x265_loop_filter_x_get_deblock_cu_parameter_ver(x265_t *h,
 													x265_loop_filter_t *loop_filter,
 													x265_data_cu_t *cu,
@@ -53,8 +57,7 @@ void x265_loop_filter_x_deblock_front_rows_or_columns_hor(x265_t *h,
 														x265_loop_filter_t *loop_filter,
 														x265_data_cu_t *cu) ;
 
-
-
+// set / get functions
 void x265_loop_filter_x_set_loop_filter_param_ver(x265_t *h,
 												x265_loop_filter_t *loop_filter,
 												x265_data_cu_t *cu,
@@ -63,6 +66,8 @@ void x265_loop_filter_x_set_loop_filter_param_hor(x265_t *h,
 												x265_loop_filter_t *loop_filter,
 												x265_data_cu_t *cu,
 												uint32_t i_abs_zorder_idx ) ;
+
+// filtering functions
 void x265_loop_filter_x_set_edge_filter_tu_ver(x265_t *h,
 												x265_loop_filter_t *loop_filter,
 												x265_data_cu_t *cu,
@@ -214,9 +219,10 @@ void x265_loop_filter_deinit ( x265_loop_filter_t *loop_filter ) ;
 int x265_loop_filter_create ( x265_loop_filter_t *loop_filter, uint32_t i_max_cu_depth ) ;
 void x265_loop_filter_destroy ( x265_loop_filter_t *loop_filter ) ;
 
-
+/// set configuration
 void x265_loop_filter_set_cfg( x265_loop_filter_t *loop_filter, int32_t b_lf_cross_tile_boundary ) ;
 
+/// picture-level deblocking filter
 void x265_loop_filter_loop_filter_pic(x265_t *h,
 									x265_loop_filter_t *loop_filter,
 									x265_frame_t *frame ) ;

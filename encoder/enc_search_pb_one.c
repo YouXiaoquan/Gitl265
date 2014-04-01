@@ -74,32 +74,48 @@ void x265_enc_search_x_tz_search_help(x265_t *h,
 {
 	uint32_t  i_sad;
 	pixel*  p_ref_srch;
+	int32_t i_width = 0 ;
+	int32_t i_height = 0 ;
+	int32_t i_partition = 0 ;
+	pixel *org = NULL ;
+	int32_t i_stride_org = 0 ;
+	int32_t b_is_sads_half = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
+
+	rd_cost = &h->rd_cost ;
+	i_width = x265_pattern_get_roi_width ( pattern_key ) ;
+	i_height = x265_pattern_get_roi_height ( pattern_key ) ;
+	org = x265_pattern_get_roi_y ( pattern_key ) ;
+	i_stride_org = x265_pattern_get_pattern_l_stride ( pattern_key ) ;
+	i_partition = PartitionFromSizes(i_width, i_height) ;
 
 	p_ref_srch = int_tz_search_struct->ref_y + i_search_y * int_tz_search_struct->i_y_stride + i_search_x;
-
-	//-- jclee for using the sad function pointer
-	x265_rd_cost_set_dist_param_p6_2(h,
-									&h->rd_cost,
-									pattern_key,
-									p_ref_srch,
-									int_tz_search_struct->i_y_stride,
-									&enc_search->dist_param );
 
 	// fast encoder decision: use subsampled sad when rows > 8 for integer me
 	if ( h->param.b_use_fast_enc )
 	{
-		if ( enc_search->dist_param.i_rows > 8 )
+		if ( i_height > 8 )
 		{
-			enc_search->dist_param.i_sub_shift = 1;
+			b_is_sads_half = 1 ;
 		}
 	}
 
-	enc_search->dist_param.i_comp = 0 ;  // y component
-
-	// distortion
-	enc_search->dist_param.i_bit_depth = h->param.sps.i_bit_depth_y;
-	i_sad = enc_search->dist_param.dist_func( &h->rd_cost, &enc_search->dist_param );
-
+	if(b_is_sads_half)
+	{
+		i_sad = rd_cost->sads_half_func[i_partition](p_ref_srch,
+													int_tz_search_struct->i_y_stride,
+													org,
+													i_stride_org,
+													h->param.sps.i_bit_depth_y) ;
+	}
+	else
+	{
+		i_sad = rd_cost->sads_func[i_partition](p_ref_srch,
+												int_tz_search_struct->i_y_stride,
+												org,
+												i_stride_org,
+												h->param.sps.i_bit_depth_y) ;
+	}
 	// motion cost
 	i_sad += x265_rd_cost_get_cost_p3( &h->rd_cost, i_search_x, i_search_y );
 
@@ -994,37 +1010,16 @@ uint32_t x265_enc_search_x_pattern_refinement(x265_t *h,
 	const x265_mv_t *mv_refine = NULL;
 	x265_mv_t mv_test ;
 	int32_t i_partition = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
 
+	rd_cost = &h->rd_cost ;
 	i_dist_best = X265_MAX_UINT;
-
 	i_org_stride = x265_pattern_get_pattern_l_stride ( pattern_key ) ;
 	p_org = x265_pattern_get_roi_y ( pattern_key ) ;
 	i_width = x265_pattern_get_roi_width ( pattern_key ) ;
 	i_height = x265_pattern_get_roi_height ( pattern_key ) ;
-
 	p_ref_pos = x265_image_get_luma_addr_p2(h, &enc_search->prediction.filtered_block[0][0]) ;
 	i_ref_stride = x265_image_get_stride(&enc_search->prediction.filtered_block[0][0]);
-	if(!h->param.b_use_had_me)
-	{
-#if X265_NS_HAD
-		x265_rd_cost_set_dist_param_p9(h,
-										&h->rd_cost,
-										pattern_key,
-										p_ref_pos,
-										i_ref_stride,
-										1,
-										&enc_search->dist_param,
-										0 );
-#else
-		x265_rd_cost_set_dist_param_p8(h,
-										&h->rd_cost,
-										pattern_key,
-										p_ref_pos,
-										i_ref_stride,
-										1,
-										&enc_search->dist_param );
-#endif
-	}
 	mv_refine = (i_frac == 2 ? mv_refine_h : mv_refine_q);
 
 	for ( loop = 0; loop < 9; ++ loop )
@@ -1051,17 +1046,21 @@ uint32_t x265_enc_search_x_pattern_refinement(x265_t *h,
 
 		enc_search->dist_param.cur = p_ref_pos;
 		enc_search->dist_param.i_bit_depth = h->param.sps.i_bit_depth_y;
+		i_partition = PartitionFromSizes(i_width, i_height) ;
 		if(h->param.b_use_had_me)
 		{
-			i_partition = PartitionFromSizes(i_width, i_height) ;
-			i_dist = h->rd_cost.satd.satd_func[i_partition](p_ref_pos,
-															i_ref_stride,
-															p_org,
-															i_org_stride);
+			i_dist = rd_cost->satd_func[i_partition](p_ref_pos,
+													i_ref_stride,
+													p_org,
+													i_org_stride);
 		}
 		else
 		{
-			i_dist = enc_search->dist_param.dist_func(&h->rd_cost, &enc_search->dist_param);
+			i_dist = rd_cost->sads_func[i_partition](p_ref_pos,
+													i_ref_stride,
+													p_org,
+													i_org_stride,
+													h->param.sps.i_bit_depth_y);
 		}
 		i_dist += x265_rd_cost_get_cost_p3(&h->rd_cost,
 										mv_test.i_hor,
@@ -1103,7 +1102,7 @@ void x265_enc_search_x_enc_pcm(x265_t* h,
 								pixel *org,
 								pixel *pcm,
 								pixel *pred,
-								spixel *resi,
+								short_pixel *resi,
 								pixel *reco,
 								uint32_t i_stride,
 								uint32_t i_width,
@@ -1115,7 +1114,7 @@ void x265_enc_search_x_enc_pcm(x265_t* h,
 	pixel *p_org = NULL;
 	pixel *p_pcm = NULL;
 	pixel *p_pred = NULL;
-	spixel *p_resi = NULL;
+	short_pixel *p_resi = NULL;
 	pixel *p_reco = NULL;
 	pixel *p_reco_pic;
 	int32_t shift_pcm;
@@ -1209,7 +1208,7 @@ void x265_enc_search_ipcm_search(x265_t *h,
 								x265_data_cu_t *cu,
 								x265_image_t *p_org_image,
 								x265_image_t **pp_pred_image,
-								x265_simage_t **pp_resi_image,
+								x265_short_image_t **pp_resi_image,
 								x265_image_t **pp_reco_image )
 {
 	uint32_t i_depth = 0;
@@ -1227,7 +1226,7 @@ void x265_enc_search_ipcm_search(x265_t *h,
 	uint32_t i_chroma_offset = 0;
 	double f_cost;
 	pixel *p_orig = NULL;
-	spixel *p_resi = NULL;
+	short_pixel *p_resi = NULL;
 	pixel *p_reco = NULL;
 	pixel *p_pred = NULL;
 	pixel *p_pcm = NULL;
@@ -1254,7 +1253,7 @@ void x265_enc_search_ipcm_search(x265_t *h,
 
 
 	p_orig = x265_image_get_luma_addr_p4(h, p_org_image, 0, i_width) ;
-	p_resi = x265_simage_get_luma_addr_p4(h, (*pp_resi_image), 0, i_width) ;
+	p_resi = x265_short_image_get_luma_addr_p4(h, (*pp_resi_image), 0, i_width) ;
 	p_pred = x265_image_get_luma_addr_p4(h, (*pp_pred_image), 0, i_width) ;
 	p_reco = x265_image_get_luma_addr_p4(h, (*pp_reco_image), 0, i_width) ;
 	p_pcm = x265_data_cu_get_pcm_sample_y(cu) + i_luma_offset;
@@ -1274,7 +1273,7 @@ void x265_enc_search_ipcm_search(x265_t *h,
 
 	// chroma u
 	p_orig = x265_image_get_cb_addr_p4(h, p_org_image, 0, i_width) ;
-	p_resi = x265_simage_get_cb_addr_p4(h, (*pp_resi_image), 0, i_width) ;
+	p_resi = x265_short_image_get_cb_addr_p4(h, (*pp_resi_image), 0, i_width) ;
 	p_pred = x265_image_get_cb_addr_p4(h, (*pp_pred_image), 0, i_width) ;
 	p_reco = x265_image_get_cb_addr_p4(h, (*pp_reco_image), 0, i_width) ;
 	p_pcm = x265_data_cu_get_pcm_sample_cb(cu) + i_chroma_offset;
@@ -1294,7 +1293,7 @@ void x265_enc_search_ipcm_search(x265_t *h,
 
 	// chroma v
 	p_orig = x265_image_get_cr_addr_p4(h, p_org_image, 0, i_width) ;
-	p_resi = x265_simage_get_cr_addr_p4(h, (*pp_resi_image), 0, i_width) ;
+	p_resi = x265_short_image_get_cr_addr_p4(h, (*pp_resi_image), 0, i_width) ;
 	p_pred = x265_image_get_cr_addr_p4(h, (*pp_pred_image), 0, i_width) ;
 	p_reco = x265_image_get_cr_addr_p4(h, (*pp_reco_image), 0, i_width) ;
 	p_pcm = x265_data_cu_get_pcm_sample_cr(cu) + i_chroma_offset;
@@ -1347,8 +1346,9 @@ void x265_enc_search_x_get_inter_prediction_error(x265_t *h,
 	pixel *p_cur = NULL ;
 	int32_t i_org_stride = 0 ;
 	int32_t i_cur_stride = 0 ;
-	x265_dist_param_t dist_param;
+	x265_rd_cost_t *rd_cost = NULL ;
 
+	rd_cost = &h->rd_cost ;
 	x265_prediction_motion_compensation(h,
 										(x265_prediction_t*)enc_search,
 										cu,
@@ -1362,38 +1362,25 @@ void x265_enc_search_x_get_inter_prediction_error(x265_t *h,
 										&i_width,
 										&i_height );
 
-	dist_param.b_apply_weight = 0;
 	p_org = x265_image_get_luma_addr_p3(h, image_org, i_abs_part_idx ) ;
 	i_org_stride = x265_image_get_stride(image_org) ;
 	p_cur = x265_image_get_luma_addr_p3(h, &enc_search->tmp_image_pred, i_abs_part_idx ) ;
 	i_cur_stride = x265_image_get_stride(&enc_search->tmp_image_pred) ;
+	i_partition = PartitionFromSizes(i_width, i_height) ;
 	if(h->param.b_use_had_me)
 	{
-		i_partition = PartitionFromSizes(i_width, i_height) ;
-		*p_err = h->rd_cost.satd.satd_func[i_partition](p_cur,
-														i_cur_stride,
-														p_org,
-														i_org_stride);
+		*p_err = rd_cost->satd_func[i_partition](p_cur,
+												i_cur_stride,
+												p_org,
+												i_org_stride);
 	}
 	else
 	{
-		x265_rd_cost_set_dist_param_p11(h,
-										&h->rd_cost,
-										&dist_param,
-										h->cu.pic.i_bit_depth_y,
-										p_org,
-										i_org_stride,
-										p_cur,
-										i_cur_stride,
-#if X265_NS_HAD
-										i_width,
-										i_height,
-										h->param.b_use_had_me, h->param.b_use_ns_qt);
-#else
-										i_width,
-										i_height);
-#endif
-		*p_err = dist_param.dist_func(&h->rd_cost, &dist_param);
+		*p_err = rd_cost->sads_func[i_partition](p_cur,
+												i_cur_stride,
+												p_org,
+												i_org_stride,
+												h->cu.pic.i_bit_depth_y);
 	}
 }
 
@@ -1568,7 +1555,7 @@ void x265_enc_search_pred_inter_search(x265_t *h,
 										x265_data_cu_t *cu,
 										x265_image_t *p_org_image,
 										x265_image_t **pp_pred_image,
-										x265_simage_t **pp_resi_image,
+										x265_short_image_t **pp_resi_image,
 										x265_image_t **pp_reco_image,
 										int32_t b_use_res,
 										int32_t b_use_mrg )
@@ -1578,7 +1565,7 @@ void x265_enc_search_pred_inter_search(x265_t *h,
 										x265_data_cu_t *cu,
 										x265_image_t *p_org_image,
 										x265_image_t **pp_pred_image,
-										x265_simage_t **pp_resi_image,
+										x265_short_image_t **pp_resi_image,
 										x265_image_t **pp_reco_image,
 										int32_t b_use_res )
 #endif
@@ -1680,7 +1667,7 @@ void x265_enc_search_pred_inter_search(x265_t *h,
 	x265_image_clear(*pp_pred_image);
 	if ( !b_use_res )
 	{
-		x265_simage_clear(*pp_resi_image);
+		x265_short_image_clear(*pp_resi_image);
 	}
 	x265_image_clear(*pp_reco_image);
 	i_num_part = x265_data_cu_get_num_part_inter(cu);
@@ -3234,8 +3221,11 @@ uint32_t x265_enc_search_x_get_template_cost(x265_t *h,
 #if X265_ZERO_MVD_EST
 	x265_dist_param_t dist_param;
 #endif
-	x265_simage_t *image_temp_cand = NULL ;
+	x265_short_image_t *image_temp_cand = NULL ;
+	int32_t i_partition = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
 
+	rd_cost = &h->rd_cost ;
 	memcpy (&mv_cand, p_mv_cand, sizeof(x265_mv_t)) ;
 	x265_data_cu_clip_mv( h, cu, &mv_cand );
 
@@ -3306,30 +3296,12 @@ uint32_t x265_enc_search_x_get_template_cost(x265_t *h,
 	*p_dist = dist_param.dist_func(&h->rd_cost, &dist_param);
 	i_cost = *p_dist + x265_rd_cost_get_cost_p2(&h->rd_cost, enc_search->mvp_idx_cost[i_mvp_idx][i_mvp_num]);
 #else
-#if X265_WEIGHTED_CHROMA_DISTORTION
-	i_cost = x265_rd_cost_get_dist_part(h,
-										&h->rd_cost,
-										h->cu.pic.i_bit_depth_y,
-										x265_image_get_luma_addr_p3(h, template_cand, i_part_addr),
-										x265_image_get_stride(template_cand),
-										x265_image_get_luma_addr_p3(h, p_org_image, i_part_addr),
-										x265_image_get_stride(p_org_image),
-										i_size_x,
-										i_size_y,
-										TEXT_LUMA,
-										DF_SAD );
-#else
-	i_cost = x265_rd_cost_get_dist_part(h,
-										&h->rd_cost,
-										h->cu.pic.i_bit_depth_y,
-										x265_image_get_luma_addr_p3(h, template_cand, i_part_addr),
-										x265_image_get_stride(template_cand),
-										x265_image_get_luma_addr_p3(h, p_org_image, i_part_addr),
-										x265_image_get_stride(p_org_image),
-										i_size_x,
-										i_size_y,
-										DF_SAD );
-#endif
+	i_partition = PartitionFromSizes(i_size_x, i_size_y) ;
+	i_cost = rd_cost->sads_func[i_partition](x265_image_get_luma_addr_p3(h, template_cand, i_part_addr),
+											x265_image_get_stride(template_cand),
+											x265_image_get_luma_addr_p3(h, p_org_image, i_part_addr),
+											x265_image_get_stride(p_org_image),
+											h->cu.pic.i_bit_depth_y);
 	i_cost = (uint32_t) x265_rd_cost_calc_rd_cost(&h->rd_cost,
 												enc_search->mvp_idx_cost[i_mvp_idx][i_mvp_num],
 												i_cost,

@@ -84,7 +84,7 @@
 #define X265_MLS_GRP_NUM                         64     ///< G644 : Max number of coefficient groups, max(16, 64)
 #define X265_MLS_CG_SIZE                         4      ///< G644 : Coefficient group size of 4x4
 
-#define X265_ADAPTIVE_QP_SELECTION               1      ///< G382: Adaptive reconstruction levels, non-normative part for adaptive QP selection
+#define X265_ADAPTIVE_QP_SELECTION               1     ///< G382: Adaptive reconstruction levels, non-normative part for adaptive QP selection
 #if X265_ADAPTIVE_QP_SELECTION
 #define X265_ARL_C_PRECISION                     7      ///< G382: 7-bit arithmetic precision
 #define X265_LEVEL_RANGE                         30     ///< G382: max coefficient level in statistics collection

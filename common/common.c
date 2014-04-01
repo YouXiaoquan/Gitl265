@@ -2139,9 +2139,9 @@ int32_t memory_compare_p (pixel *src1,
 	return 0 ;
 }
 
-int32_t memory_compare_s (spixel *src1,
+int32_t memory_compare_s (short_pixel *src1,
 						int32_t i_src_stride1,
-						spixel *src2,
+						short_pixel *src2,
 						int32_t i_src_stride2,
 						int32_t i_width,
 						int32_t i_height )
@@ -2150,7 +2150,7 @@ int32_t memory_compare_s (spixel *src1,
 
 	for ( loop = 0 ; loop < i_height ; ++ loop )
 	{
-		if ( memcmp ( src1, src2, sizeof(spixel) * i_width ) )
+		if ( memcmp ( src1, src2, sizeof(short_pixel) * i_width ) )
 		{
 			/**/
 			fprintf ( stderr, "Line %d Error!\n", loop ) ;
@@ -2243,12 +2243,12 @@ int32_t memory_compare_int32 (int32_t *src1,
 
 
 
-spixel x265_clip_y( x265_t *h, spixel v )
+short_pixel x265_clip_y( x265_t *h, short_pixel v )
 {
     return ( (v < 0) ? 0 : (v > ((1<<h->param.sps.i_bit_depth_y)-1)) ? ((1<<h->param.sps.i_bit_depth_y)-1) : v );
 }
 
-spixel x265_clip_c( x265_t *h, spixel v )
+short_pixel x265_clip_c( x265_t *h, short_pixel v )
 {
     return ( (v < 0) ? 0 : (v > ((1<<h->param.sps.i_bit_depth_c)-1)) ? ((1<<h->param.sps.i_bit_depth_c)-1) : v );
 }

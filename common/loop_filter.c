@@ -135,7 +135,11 @@ uint32_t x265_loop_filter_x_calc_bs_idx_hor(x265_t *h,
 	                               + i_base_unit_idx ];
 }
 
-
+/**
+ - call deblocking function for every CU
+ .
+ \param  frame
+ */
 void x265_loop_filter_loop_filter_pic(x265_t *h,
 									x265_loop_filter_t *loop_filter,
 									x265_frame_t *frame )
@@ -2882,7 +2886,19 @@ void x265_loop_filter_x_edge_filter_chroma_pu_hor(x265_t *h,
 }
 
 
-
+/**
+ - Deblocking for the luminance component with strong or weak filter
+ .
+ \param p_src           pointer to picture data
+ \param i_offset         offset value for picture data
+ \param i_tc              tc value
+ \param b_sw              decision strong/weak filter
+ \param b_part_p_no_filter  indicator to disable filtering on partP
+ \param b_part_q_no_filter  indicator to disable filtering on partQ
+ \param i_thr_cut         threshold value for weak filter decision
+ \param b_filter_second_p  decision weak filter/no filter for partP
+ \param b_filter_second_q  decision weak filter/no filter for partQ
+*/
 void x265_loop_filter_x_pixel_filter_luma(x265_t *h,
 										x265_loop_filter_t *loop_filter,
 										pixel* p_src,
@@ -2965,6 +2981,15 @@ void x265_loop_filter_x_pixel_filter_luma(x265_t *h,
 	}
 }
 
+/**
+ - Deblocking of one line/column for the chrominance component
+ .
+ \param p_src           pointer to picture data
+ \param i_offset         offset value for picture data
+ \param i_tc              tc value
+ \param b_part_p_no_filter  indicator to disable filtering on partP
+ \param b_part_q_no_filter  indicator to disable filtering on partQ
+ */
 void x265_loop_filter_x_pixel_filter_chroma(x265_t *h,
 											x265_loop_filter_t *loop_filter,
 											pixel* p_src,
@@ -2998,6 +3023,15 @@ void x265_loop_filter_x_pixel_filter_chroma(x265_t *h,
 	}
 }
 
+/**
+ - Decision between strong and weak filter
+ .
+ \param i_offset         offset value for picture data
+ \param i_d               d value
+ \param i_beta            beta value
+ \param i_tc              tc value
+ \param p_src           pointer to picture data
+ */
 int32_t x265_loop_filter_x_use_strong_filtering(x265_loop_filter_t *loop_filter,
 												int32_t i_offset,
 												int32_t i_d,

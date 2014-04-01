@@ -1,4 +1,6 @@
-
+/** \file     bitstream.c
+    \brief    class for handling bitstream
+*/
 
 
 #include "common.h"

@@ -42,7 +42,7 @@ int x265_prediction_init ( x265_t *h, x265_prediction_t *prediction )
 	int i = 0, j = 0 ;
 	for (i = 0; i < 4; i++)
 	{
-		if ( x265_simage_init ( &prediction->filtered_block_tmp[i] ) )
+		if ( x265_short_image_init ( &prediction->filtered_block_tmp[i] ) )
 		{
 			goto fail ;
 		}
@@ -63,15 +63,15 @@ int x265_prediction_init ( x265_t *h, x265_prediction_t *prediction )
 	{
 		goto fail ;
 	}
-	if ( x265_simage_init ( &prediction->simage_pred[0] ) )
+	if ( x265_short_image_init ( &prediction->short_image_pred[0] ) )
 	{
 		goto fail ;
 	}
-	if ( x265_simage_init ( &prediction->simage_pred[1] ) )
+	if ( x265_short_image_init ( &prediction->short_image_pred[1] ) )
 	{
 		goto fail ;
 	}
-	if ( x265_simage_init ( &prediction->image_temp_cand ) )
+	if ( x265_short_image_init ( &prediction->image_temp_cand ) )
 	{
 		goto fail ;
 	}
@@ -80,10 +80,7 @@ int x265_prediction_init ( x265_t *h, x265_prediction_t *prediction )
 		goto fail ;
 	}
 
-	if ( x265_interpolation_filter_init(h, &prediction->interpolation_filter) )
-	{
-		goto fail ;
-	}
+	x265_ip_initialize(&prediction->ip, h->param.cpu) ;
 
     return 0 ;
 
@@ -100,7 +97,7 @@ void x265_prediction_deinit ( x265_prediction_t *prediction )
 
 	for (i = 0; i < 4; i++)
 	{
-		x265_simage_deinit ( &prediction->filtered_block_tmp[i] ) ;
+		x265_short_image_deinit ( &prediction->filtered_block_tmp[i] ) ;
 		for (j = 0; j < 4; j++)
 		{
 			x265_image_deinit ( &prediction->filtered_block[i][j] ) ;
@@ -109,9 +106,9 @@ void x265_prediction_deinit ( x265_prediction_t *prediction )
 
 	x265_image_deinit ( &prediction->image_pred[0] ) ;
 	x265_image_deinit ( &prediction->image_pred[1] ) ;
-	x265_simage_deinit ( &prediction->image_temp_cand ) ;
-	x265_simage_deinit ( &prediction->simage_pred[0] ) ;
-	x265_simage_deinit ( &prediction->simage_pred[1] ) ;
+	x265_short_image_deinit ( &prediction->image_temp_cand ) ;
+	x265_short_image_deinit ( &prediction->short_image_pred[0] ) ;
+	x265_short_image_deinit ( &prediction->short_image_pred[1] ) ;
 	x265_image_deinit ( &prediction->image_pred_temp ) ;
 }
 
@@ -133,7 +130,7 @@ int x265_prediction_init_temp_buff( x265_t *h, x265_prediction_t *prediction )
 		i_ext_i_height = h->cu.pic.i_max_cu_height + 1;
 		for (i = 0; i < 4; i++)
 		{
-			if ( x265_simage_create ( &prediction->filtered_block_tmp[i],
+			if ( x265_short_image_create ( &prediction->filtered_block_tmp[i],
 									i_ext_i_width, i_ext_i_height + 7) )
 			{
 				goto fail ;
@@ -165,17 +162,17 @@ int x265_prediction_init_temp_buff( x265_t *h, x265_prediction_t *prediction )
 		{
 			goto fail ;
 		}
-		if ( x265_simage_create ( &prediction->simage_pred[0],
+		if ( x265_short_image_create ( &prediction->short_image_pred[0],
 								h->cu.pic.i_max_cu_width, h->cu.pic.i_max_cu_height ) )
 		{
 			goto fail ;
 		}
-		if ( x265_simage_create ( &prediction->simage_pred[1],
+		if ( x265_short_image_create ( &prediction->short_image_pred[1],
 								h->cu.pic.i_max_cu_width, h->cu.pic.i_max_cu_height ) )
 		{
 			goto fail ;
 		}
-		if ( x265_simage_create ( &prediction->image_temp_cand,
+		if ( x265_short_image_create ( &prediction->image_temp_cand,
 								h->cu.pic.i_max_cu_width, h->cu.pic.i_max_cu_height ) )
 		{
 			goto fail ;
@@ -211,7 +208,7 @@ void x265_prediction_deinit_temp_buff( x265_prediction_t *prediction )
 
 	for (i = 0; i < 4; i++)
 	{
-		x265_simage_destroy ( &prediction->filtered_block_tmp[i] ) ;
+		x265_short_image_destroy ( &prediction->filtered_block_tmp[i] ) ;
 		for (j = 0; j < 4; j++)
 		{
 			x265_image_destroy ( &prediction->filtered_block[i][j] ) ;
@@ -220,9 +217,9 @@ void x265_prediction_deinit_temp_buff( x265_prediction_t *prediction )
 
 	x265_image_destroy ( &prediction->image_pred[0] ) ;
 	x265_image_destroy ( &prediction->image_pred[1] ) ;
-	x265_simage_destroy ( &prediction->image_temp_cand ) ;
-	x265_simage_destroy ( &prediction->simage_pred[0] ) ;
-	x265_simage_destroy ( &prediction->simage_pred[1] ) ;
+	x265_short_image_destroy ( &prediction->image_temp_cand ) ;
+	x265_short_image_destroy ( &prediction->short_image_pred[0] ) ;
+	x265_short_image_destroy ( &prediction->short_image_pred[1] ) ;
 	x265_image_destroy ( &prediction->image_pred_temp ) ;
 	x265_free ( prediction->luma_rec_buffer ) ;
 	x265_free ( prediction->image_ext_buffer ) ;
@@ -280,11 +277,12 @@ pixel x265_prediction_pred_intra_get_pred_val_dc( pixel *left,
 	return p_dc_val;
 }
 
-
 void x265_intra_pred_angular (pixel *_src, pixel *_top,
 								pixel *_left,
-								int32_t stride, int i_chroma_idx,
-								int i_mode, int size)
+								int32_t stride,
+								int i_chroma_idx,
+								int i_mode,
+								int size)
 {
     int x, y;
     pixel *src = (pixel*)_src;
@@ -782,7 +780,7 @@ void x265_prediction_motion_compensation(x265_t *h,
 	int32_t         i_width;
 	int32_t         i_height;
 	uint32_t        i_part_addr;
-	x265_simage_t *simage_pred = NULL ;
+	x265_short_image_t *short_image_pred = NULL ;
 
 	if ( i_part_idx >= 0 )
 	{
@@ -795,7 +793,7 @@ void x265_prediction_motion_compensation(x265_t *h,
 		{
 			if( h->pps[0].b_use_weight_pred )
 			{
-				simage_pred = &prediction->simage_pred[0] ;
+				short_image_pred = &prediction->short_image_pred[0] ;
 				x265_prediction_x_pred_inter_uni_s(h,
 													prediction,
 													cu,
@@ -803,7 +801,7 @@ void x265_prediction_motion_compensation(x265_t *h,
 													i_width,
 													i_height,
 													i_ref_pic_list,
-													&simage_pred,
+													&short_image_pred,
 													1 );
 			}
 			else
@@ -823,7 +821,7 @@ void x265_prediction_motion_compensation(x265_t *h,
 				x265_weight_prediction_x_weighted_prediction_uni(h,
 																(x265_weight_prediction_t*)prediction,
 																cu,
-																&prediction->simage_pred[0],
+																&prediction->short_image_pred[0],
 																i_part_addr,
 																i_width,
 																i_height,
@@ -871,7 +869,7 @@ void x265_prediction_motion_compensation(x265_t *h,
 		{
 			if ( h->pps[0].b_use_weight_pred )
 			{
-				simage_pred = &prediction->simage_pred[0] ;
+				short_image_pred = &prediction->short_image_pred[0] ;
 				x265_prediction_x_pred_inter_uni_s(h,
 												prediction,
 												cu,
@@ -879,7 +877,7 @@ void x265_prediction_motion_compensation(x265_t *h,
 												i_width,
 												i_height,
 												i_ref_pic_list,
-												&simage_pred,
+												&short_image_pred,
 												1 );
 			}
 			else
@@ -899,7 +897,7 @@ void x265_prediction_motion_compensation(x265_t *h,
 				x265_weight_prediction_x_weighted_prediction_uni(h,
 																(x265_weight_prediction_t*)prediction,
 																cu,
-																&prediction->simage_pred[0],
+																&prediction->short_image_pred[0],
 																i_part_addr,
 																i_width,
 																i_height,
@@ -991,7 +989,7 @@ void x265_prediction_x_pred_inter_uni_s ( x265_t *h,
 										int32_t i_width,
 										int32_t i_height,
 										enum ref_pic_list_e i_ref_pic_list,
-										x265_simage_t **pp_simage_pred,
+										x265_short_image_t **pp_short_image_pred,
 										int32_t b_bi )
 {
 	int32_t i_ref_idx = 0;
@@ -1017,7 +1015,7 @@ void x265_prediction_x_pred_inter_uni_s ( x265_t *h,
 											&mv,
 											i_width,
 											i_height,
-											pp_simage_pred,
+											pp_short_image_pred,
 											b_bi );
 	x265_prediction_x_pred_inter_chroma_blk_s(h,
 											prediction,
@@ -1027,7 +1025,7 @@ void x265_prediction_x_pred_inter_uni_s ( x265_t *h,
 											&mv,
 											i_width,
 											i_height,
-											pp_simage_pred,
+											pp_short_image_pred,
 											b_bi );
 }
 
@@ -1039,7 +1037,7 @@ void x265_prediction_x_pred_inter_bi ( x265_t *h,
 										int32_t i_height,
 										x265_image_t **pp_image_pred )
 {
-	x265_simage_t *p_mb_simage;
+	x265_short_image_t *p_mb_short_image;
 	int32_t      i_ref_idx[2] = {-1, -1};
 
 	for ( int32_t i_ref_list = 0; i_ref_list < 2; i_ref_list++ )
@@ -1055,7 +1053,7 @@ void x265_prediction_x_pred_inter_bi ( x265_t *h,
 
 		assert( i_ref_idx[i_ref_list] < h->i_ref[i_ref_pic_list] );
 
-		p_mb_simage = &prediction->simage_pred[i_ref_list];
+		p_mb_short_image = &prediction->short_image_pred[i_ref_list];
 		if( x265_cu_mv_field_get_ref_idx(
 			x265_base_data_cu_get_cu_mv_field((x265_base_data_cu_t*)cu, REF_PIC_LIST_0),
 											i_part_addr) >= 0
@@ -1070,7 +1068,7 @@ void x265_prediction_x_pred_inter_bi ( x265_t *h,
 												i_width,
 												i_height,
 												i_ref_pic_list,
-												&p_mb_simage,
+												&p_mb_short_image,
 												1 );
 		}
 		else
@@ -1087,7 +1085,7 @@ void x265_prediction_x_pred_inter_bi ( x265_t *h,
 													i_width,
 													i_height,
 													i_ref_pic_list,
-													&p_mb_simage,
+													&p_mb_short_image,
 													1 );
 			}
 			else
@@ -1111,8 +1109,8 @@ void x265_prediction_x_pred_inter_bi ( x265_t *h,
 		x265_weight_prediction_x_weighted_prediction_bi(h,
 														(x265_weight_prediction_t*)prediction,
 														cu,
-														&prediction->simage_pred[0],
-														&prediction->simage_pred[1],
+														&prediction->short_image_pred[0],
+														&prediction->short_image_pred[1],
 														i_ref_idx[0],
 														i_ref_idx[1],
 														i_part_addr,
@@ -1126,7 +1124,7 @@ void x265_prediction_x_pred_inter_bi ( x265_t *h,
 		x265_weight_prediction_x_weighted_prediction_uni(h,
 														(x265_weight_prediction_t*)prediction,
 														cu,
-														&prediction->simage_pred[0],
+														&prediction->short_image_pred[0],
 														i_part_addr,
 														i_width,
 														i_height,
@@ -1137,8 +1135,8 @@ void x265_prediction_x_pred_inter_bi ( x265_t *h,
 	else if ((i_ref_idx[0] >= 0) && (i_ref_idx[1] >= 0))
 	{
 		x265_prediction_x_weighted_average(h,
-											&prediction->simage_pred[0],
-											&prediction->simage_pred[1],
+											&prediction->short_image_pred[0],
+											&prediction->short_image_pred[1],
 											i_ref_idx[0],
 											i_ref_idx[1],
 											i_part_addr,
@@ -1182,8 +1180,9 @@ void x265_prediction_x_pred_inter_luma_blk_p( x265_t *h,
 	int16_t *tmp = 0;
 	int32_t i_filter_size = 0;
 	int32_t i_half_filter_size = 0;
+	x265_ip_t *ip = NULL ;
 
-
+	ip = &prediction->ip ;
 
 	i_ref_stride = ref_pic->i_stride[0];
 	i_ref_offset = ( mv->i_hor >> 2 ) + ( mv->i_ver >> 2 ) * i_ref_stride;
@@ -1204,61 +1203,47 @@ void x265_prediction_x_pred_inter_luma_blk_p( x265_t *h,
 
 	if ( i_y_frac == 0 )
 	{
-		x265_interpolation_filter_filter_hor_luma_p_p(h,
-												&prediction->interpolation_filter,
-												ref,
-												i_ref_stride,
-												dst,
-												i_dst_stride,
-												i_width,
-												i_height,
-												i_x_frac,
-												!b_bi );
+		ip->ip_filter_hor_luma_p_p[i_x_frac](ref,
+											i_ref_stride,
+											dst,
+											i_dst_stride,
+											i_width,
+											i_height,
+											h->param.sps.i_bit_depth_y) ;
 	}
 	else if ( i_x_frac == 0 )
 	{
-		x265_interpolation_filter_filter_ver_luma_p_p(h,
-												&prediction->interpolation_filter,
-												ref,
-												i_ref_stride,
-												dst,
-												i_dst_stride,
-												i_width,
-												i_height,
-												i_y_frac,
-												1,
-												!b_bi );
+		ip->ip_filter_ver_luma_p_p[i_y_frac](ref,
+											i_ref_stride,
+											dst,
+											i_dst_stride,
+											i_width,
+											i_height,
+											h->param.sps.i_bit_depth_y) ;
 	}
 	else
 	{
-		i_tmp_stride = x265_simage_get_stride(&prediction->filtered_block_tmp[0]);
-		tmp = x265_simage_get_luma_addr_p2(h,
+		i_tmp_stride = x265_short_image_get_stride(&prediction->filtered_block_tmp[0]);
+		tmp = x265_short_image_get_luma_addr_p2(h,
 										&prediction->filtered_block_tmp[0]);
 
 		i_filter_size = X265_NTAPS_LUMA;
 		i_half_filter_size = ( i_filter_size >> 1 );
 
-		x265_interpolation_filter_filter_hor_luma_p_s(h,
-												&prediction->interpolation_filter,
-												ref - (i_half_filter_size - 1) * i_ref_stride,
-												i_ref_stride,
-												tmp,
-												i_tmp_stride,
-												i_width,
-												i_height + i_filter_size - 1,
-												i_x_frac,
-												0 );
-		x265_interpolation_filter_filter_ver_luma_s_p(h,
-												&prediction->interpolation_filter,
-												tmp + (i_half_filter_size - 1) * i_tmp_stride,
-												i_tmp_stride,
-												dst,
-												i_dst_stride,
-												i_width,
-												i_height,
-												i_y_frac,
-												0,
-												!b_bi);
+		ip->ip_filter_hor_luma_p_s[i_x_frac](ref - (i_half_filter_size - 1) * i_ref_stride,
+											i_ref_stride,
+											tmp,
+											i_tmp_stride,
+											i_width,
+											i_height + i_filter_size - 1,
+											h->param.sps.i_bit_depth_y) ;
+		ip->ip_filter_ver_luma_s_p[i_y_frac](tmp + (i_half_filter_size - 1) * i_tmp_stride,
+											i_tmp_stride,
+											dst,
+											i_dst_stride,
+											i_width,
+											i_height,
+											h->param.sps.i_bit_depth_y) ;
 	}
 }
 
@@ -1282,22 +1267,23 @@ void x265_prediction_x_pred_inter_luma_blk_s( x265_t *h,
 											x265_mv_t *mv,
 											int32_t i_width,
 											int32_t i_height,
-											x265_simage_t **pp_dst_simage,
+											x265_short_image_t **pp_dst_short_image,
 											int32_t b_bi )
 {
 	int32_t i_ref_stride = 0;
 	int32_t i_ref_offset = 0;
 	pixel *ref = 0;
 	int32_t i_dst_stride = 0;
-	spixel *dst = 0;
+	short_pixel *dst = 0;
 	int32_t i_x_frac = 0;
 	int32_t i_y_frac = 0;
 	int32_t i_tmp_stride = 0;
 	int16_t *tmp = 0;
 	int32_t i_filter_size = 0;
 	int32_t i_half_filter_size = 0;
+	x265_ip_t *ip = NULL ;
 
-
+	ip = &prediction->ip ;
 
 	i_ref_stride = ref_pic->i_stride[0];
 	i_ref_offset = ( mv->i_hor >> 2 ) + ( mv->i_ver >> 2 ) * i_ref_stride;
@@ -1307,9 +1293,9 @@ void x265_prediction_x_pred_inter_luma_blk_s( x265_t *h,
 									x265_base_data_cu_get_zorder_idx_in_cu((x265_base_data_cu_t*)cu) + i_part_addr )
 			+ i_ref_offset;
 
-	i_dst_stride = x265_simage_get_stride(*pp_dst_simage);
-	dst = x265_simage_get_luma_addr_p3(h,
-									*pp_dst_simage,
+	i_dst_stride = x265_short_image_get_stride(*pp_dst_short_image);
+	dst = x265_short_image_get_luma_addr_p3(h,
+									*pp_dst_short_image,
 									i_part_addr );
 
 	i_x_frac = mv->i_hor & 0x3;
@@ -1318,61 +1304,48 @@ void x265_prediction_x_pred_inter_luma_blk_s( x265_t *h,
 
 	if ( i_y_frac == 0 )
 	{
-		x265_interpolation_filter_filter_hor_luma_p_s(h,
-												&prediction->interpolation_filter,
-												ref,
-												i_ref_stride,
-												dst,
-												i_dst_stride,
-												i_width,
-												i_height,
-												i_x_frac,
-												!b_bi );
+		ip->ip_filter_hor_luma_p_s[i_x_frac](ref,
+											i_ref_stride,
+											dst,
+											i_dst_stride,
+											i_width,
+											i_height,
+											h->param.sps.i_bit_depth_y) ;
 	}
 	else if ( i_x_frac == 0 )
 	{
-		x265_interpolation_filter_filter_ver_luma_p_s(h,
-												&prediction->interpolation_filter,
-												ref,
+		ip->ip_filter_ver_luma_p_s[i_y_frac](ref,
 												i_ref_stride,
 												dst,
 												i_dst_stride,
 												i_width,
 												i_height,
-												i_y_frac,
-												1,
-												!b_bi );
+												h->param.sps.i_bit_depth_y);
 	}
 	else
 	{
-		i_tmp_stride = x265_simage_get_stride(&prediction->filtered_block_tmp[0]);
-		tmp = x265_simage_get_luma_addr_p2(h,
+		i_tmp_stride = x265_short_image_get_stride(&prediction->filtered_block_tmp[0]);
+		tmp = x265_short_image_get_luma_addr_p2(h,
 										&prediction->filtered_block_tmp[0]);
 
 		i_filter_size = X265_NTAPS_LUMA;
 		i_half_filter_size = ( i_filter_size >> 1 );
 
-		x265_interpolation_filter_filter_hor_luma_p_s(h,
-												&prediction->interpolation_filter,
-												ref - (i_half_filter_size - 1) * i_ref_stride,
-												i_ref_stride,
-												tmp,
-												i_tmp_stride,
-												i_width,
-												i_height + i_filter_size - 1,
-												i_x_frac,
-												0 );
-		x265_interpolation_filter_filter_ver_luma_s_s(h,
-												&prediction->interpolation_filter,
-												tmp + (i_half_filter_size - 1) * i_tmp_stride,
-												i_tmp_stride,
-												dst,
-												i_dst_stride,
-												i_width,
-												i_height,
-												i_y_frac,
-												0,
-												!b_bi);
+		ip->ip_filter_hor_luma_p_s[i_x_frac](ref - (i_half_filter_size - 1) * i_ref_stride,
+											i_ref_stride,
+											tmp,
+											i_tmp_stride,
+											i_width,
+											i_height + i_filter_size - 1,
+											h->param.sps.i_bit_depth_y) ;
+
+		ip->ip_filter_ver_luma_s_s[i_y_frac](tmp + (i_half_filter_size - 1) * i_tmp_stride,
+											i_tmp_stride,
+											dst,
+											i_dst_stride,
+											i_width,
+											i_height,
+											h->param.sps.i_bit_depth_y);
 	}
 }
 
@@ -1414,10 +1387,9 @@ void x265_prediction_x_pred_inter_chroma_blk_p(x265_t *h,
 	int16_t *ext_y = NULL;
 	int32_t i_filter_size = 0;
 	int32_t i_half_filter_size = 0;
+	x265_ip_t *ip = NULL ;
 
-
-
-
+	ip = &prediction->ip ;
 	i_ref_stride = ref_pic->i_stride[1];
 	i_dst_stride = x265_image_get_c_stride(*pp_dst_image);
 	i_ref_offset  = (mv->i_hor >> 3) + (mv->i_ver >> 3) * i_ref_stride;
@@ -1445,104 +1417,76 @@ void x265_prediction_x_pred_inter_chroma_blk_p(x265_t *h,
 	i_cx_width = i_width  >> 1;
 	i_cx_height = i_height >> 1;
 
-	i_ext_stride = x265_simage_get_stride(&prediction->filtered_block_tmp[0]);
-	ext_y = x265_simage_get_luma_addr_p2(h, &prediction->filtered_block_tmp[0]);
+	i_ext_stride = x265_short_image_get_stride(&prediction->filtered_block_tmp[0]);
+	ext_y = x265_short_image_get_luma_addr_p2(h, &prediction->filtered_block_tmp[0]);
 	i_filter_size = X265_NTAPS_CHROMA;
 	i_half_filter_size = (i_filter_size>>1);
 
 	if ( i_y_frac == 0 )
 	{
-		x265_interpolation_filter_filter_hor_chroma_p_p(h,
-													&prediction->interpolation_filter,
-													ref_cb,
-													i_ref_stride,
-													dst_cb,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_x_frac,
-													!b_bi);
-		x265_interpolation_filter_filter_hor_chroma_p_p(h,
-													&prediction->interpolation_filter,
-													ref_cr,
-													i_ref_stride,
-													dst_cr,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_x_frac,
-													!b_bi);
+		ip->ip_filter_hor_chroma_p_p[i_x_frac](ref_cb,
+												i_ref_stride,
+												dst_cb,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
+		ip->ip_filter_hor_chroma_p_p[i_x_frac](ref_cr,
+												i_ref_stride,
+												dst_cr,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
 	}
 	else if ( i_x_frac == 0 )
 	{
-		x265_interpolation_filter_filter_ver_chroma_p_p(h,
-													&prediction->interpolation_filter,
-													ref_cb,
-													i_ref_stride,
-													dst_cb,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_y_frac,
-													1,
-													!b_bi);
-		x265_interpolation_filter_filter_ver_chroma_p_p(h,
-													&prediction->interpolation_filter,
-													ref_cr,
-													i_ref_stride,
-													dst_cr,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_y_frac,
-													1,
-													!b_bi);
+		ip->ip_filter_ver_chroma_p_p[i_y_frac](ref_cb,
+												i_ref_stride,
+												dst_cb,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
+		ip->ip_filter_ver_chroma_p_p[i_y_frac](ref_cr,
+												i_ref_stride,
+												dst_cr,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
 	}
 	else
 	{
-		x265_interpolation_filter_filter_hor_chroma_p_s(h,
-													&prediction->interpolation_filter,
-													ref_cb - (i_half_filter_size - 1) * i_ref_stride,
-													i_ref_stride,
-													ext_y,
-													i_ext_stride,
-													i_cx_width,
-													i_cx_height + i_filter_size - 1,
-													i_x_frac,
-													0 ) ;
-		x265_interpolation_filter_filter_ver_chroma_s_p(h,
-													&prediction->interpolation_filter,
-													ext_y  + (i_half_filter_size - 1) * i_ext_stride,
-													i_ext_stride,
-													dst_cb,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_y_frac,
-													0,
-													!b_bi);
+		ip->ip_filter_hor_chroma_p_s[i_x_frac](ref_cb - (i_half_filter_size - 1) * i_ref_stride,
+												i_ref_stride,
+												ext_y,
+												i_ext_stride,
+												i_cx_width,
+												i_cx_height + i_filter_size - 1,
+												h->param.sps.i_bit_depth_c);
+		ip->ip_filter_ver_chroma_s_p[i_y_frac](ext_y  + (i_half_filter_size - 1) * i_ext_stride,
+												i_ext_stride,
+												dst_cb,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
 
-		x265_interpolation_filter_filter_hor_chroma_p_s(h,
-													&prediction->interpolation_filter,
-													ref_cr - (i_half_filter_size - 1) * i_ref_stride,
-													i_ref_stride,
-													ext_y,
-													i_ext_stride,
-													i_cx_width,
-													i_cx_height + i_filter_size - 1,
-													i_x_frac,
-													0);
-		x265_interpolation_filter_filter_ver_chroma_s_p(h,
-													&prediction->interpolation_filter,
-													ext_y + (i_half_filter_size - 1) * i_ext_stride,
-													i_ext_stride,
-													dst_cr,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_y_frac,
-													0,
-													!b_bi);
+		ip->ip_filter_hor_chroma_p_s[i_x_frac](ref_cr - (i_half_filter_size - 1) * i_ref_stride,
+												i_ref_stride,
+												ext_y,
+												i_ext_stride,
+												i_cx_width,
+												i_cx_height + i_filter_size - 1,
+												h->param.sps.i_bit_depth_c);
+		ip->ip_filter_ver_chroma_s_p[i_y_frac](ext_y + (i_half_filter_size - 1) * i_ext_stride,
+												i_ext_stride,
+												dst_cr,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
 	}
 }
 
@@ -1566,7 +1510,7 @@ void x265_prediction_x_pred_inter_chroma_blk_s(x265_t *h,
 											x265_mv_t *mv,
 											int32_t i_width,
 											int32_t i_height,
-											x265_simage_t **pp_dst_simage,
+											x265_short_image_t **pp_dst_short_image,
 											int32_t b_bi )
 {
 	int32_t i_ref_stride = 0;
@@ -1574,8 +1518,8 @@ void x265_prediction_x_pred_inter_chroma_blk_s(x265_t *h,
 	int32_t i_ref_offset = 0;
 	pixel* ref_cb = 0;
 	pixel* ref_cr = 0;
-	spixel* dst_cb = 0;
-	spixel* dst_cr = 0;
+	short_pixel* dst_cb = 0;
+	short_pixel* dst_cr = 0;
 	int32_t i_x_frac  = 0;
 	int32_t i_y_frac  = 0;
 	uint32_t i_cx_width = 0;
@@ -1584,9 +1528,11 @@ void x265_prediction_x_pred_inter_chroma_blk_s(x265_t *h,
 	int16_t *ext_y = NULL;
 	int32_t i_filter_size = 0;
 	int32_t i_half_filter_size = 0;
+	x265_ip_t *ip = NULL ;
 
+	ip = &prediction->ip ;
 	i_ref_stride = ref_pic->i_stride[1];
-	i_dst_stride = x265_simage_get_c_stride(*pp_dst_simage);
+	i_dst_stride = x265_short_image_get_c_stride(*pp_dst_short_image);
 	i_ref_offset  = (mv->i_hor >> 3) + (mv->i_ver >> 3) * i_ref_stride;
 
 	ref_cb = x265_frame_get_cb_addr_p4(h,
@@ -1600,11 +1546,11 @@ void x265_prediction_x_pred_inter_chroma_blk_s(x265_t *h,
 										x265_base_data_cu_get_zorder_idx_in_cu((x265_base_data_cu_t*)cu) + i_part_addr )
 				+ i_ref_offset;
 
-	dst_cb = x265_simage_get_cb_addr_p3(h,
-										*pp_dst_simage,
+	dst_cb = x265_short_image_get_cb_addr_p3(h,
+										*pp_dst_short_image,
 										i_part_addr );
-	dst_cr = x265_simage_get_cr_addr_p3(h,
-										*pp_dst_simage,
+	dst_cr = x265_short_image_get_cr_addr_p3(h,
+										*pp_dst_short_image,
 										i_part_addr );
 
 	i_x_frac = mv->i_hor & 0x7;
@@ -1612,110 +1558,82 @@ void x265_prediction_x_pred_inter_chroma_blk_s(x265_t *h,
 	i_cx_width = i_width  >> 1;
 	i_cx_height = i_height >> 1;
 
-	i_ext_stride = x265_simage_get_stride(&prediction->filtered_block_tmp[0]);
-	ext_y = x265_simage_get_luma_addr_p2(h, &prediction->filtered_block_tmp[0]);
+	i_ext_stride = x265_short_image_get_stride(&prediction->filtered_block_tmp[0]);
+	ext_y = x265_short_image_get_luma_addr_p2(h, &prediction->filtered_block_tmp[0]);
 	i_filter_size = X265_NTAPS_CHROMA;
 	i_half_filter_size = (i_filter_size>>1);
 
 	if ( i_y_frac == 0 )
 	{
-		x265_interpolation_filter_filter_hor_chroma_p_s(h,
-													&prediction->interpolation_filter,
-													ref_cb,
-													i_ref_stride,
-													dst_cb,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_x_frac,
-													!b_bi);
-		x265_interpolation_filter_filter_hor_chroma_p_s(h,
-													&prediction->interpolation_filter,
-													ref_cr,
-													i_ref_stride,
-													dst_cr,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_x_frac,
-													!b_bi);
+		ip->ip_filter_hor_chroma_p_s[i_x_frac](ref_cb,
+												i_ref_stride,
+												dst_cb,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
+		ip->ip_filter_hor_chroma_p_s[i_x_frac](ref_cr,
+												i_ref_stride,
+												dst_cr,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
 	}
 	else if ( i_x_frac == 0 )
 	{
-		x265_interpolation_filter_filter_ver_chroma_p_s(h,
-													&prediction->interpolation_filter,
-													ref_cb,
-													i_ref_stride,
-													dst_cb,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_y_frac,
-													1,
-													!b_bi);
-		x265_interpolation_filter_filter_ver_chroma_p_s(h,
-													&prediction->interpolation_filter,
-													ref_cr,
-													i_ref_stride,
-													dst_cr,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_y_frac,
-													1,
-													!b_bi);
+		ip->ip_filter_ver_chroma_p_s[i_y_frac](ref_cb,
+												i_ref_stride,
+												dst_cb,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
+		ip->ip_filter_ver_chroma_p_s[i_y_frac](ref_cr,
+												i_ref_stride,
+												dst_cr,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
 	}
 	else
 	{
-		x265_interpolation_filter_filter_hor_chroma_p_s(h,
-													&prediction->interpolation_filter,
-													ref_cb - (i_half_filter_size - 1) * i_ref_stride,
-													i_ref_stride,
-													ext_y,
-													i_ext_stride,
-													i_cx_width,
-													i_cx_height + i_filter_size - 1,
-													i_x_frac,
-													0 ) ;
-		x265_interpolation_filter_filter_ver_chroma_s_s(h,
-													&prediction->interpolation_filter,
-													ext_y  + (i_half_filter_size - 1) * i_ext_stride,
-													i_ext_stride,
-													dst_cb,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_y_frac,
-													0,
-													!b_bi);
+		ip->ip_filter_hor_chroma_p_s[i_x_frac](ref_cb - (i_half_filter_size - 1) * i_ref_stride,
+												i_ref_stride,
+												ext_y,
+												i_ext_stride,
+												i_cx_width,
+												i_cx_height + i_filter_size - 1,
+												h->param.sps.i_bit_depth_c);
+		ip->ip_filter_ver_chroma_s_s[i_y_frac](ext_y  + (i_half_filter_size - 1) * i_ext_stride,
+												i_ext_stride,
+												dst_cb,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
 
-		x265_interpolation_filter_filter_hor_chroma_p_s(h,
-													&prediction->interpolation_filter,
-													ref_cr - (i_half_filter_size - 1) * i_ref_stride,
-													i_ref_stride,
-													ext_y,
-													i_ext_stride,
-													i_cx_width,
-													i_cx_height + i_filter_size - 1,
-													i_x_frac,
-													0);
-		x265_interpolation_filter_filter_ver_chroma_s_s(h,
-													&prediction->interpolation_filter,
-													ext_y + (i_half_filter_size - 1) * i_ext_stride,
-													i_ext_stride,
-													dst_cr,
-													i_dst_stride,
-													i_cx_width,
-													i_cx_height,
-													i_y_frac,
-													0,
-													!b_bi);
+		ip->ip_filter_hor_chroma_p_s[i_x_frac](ref_cr - (i_half_filter_size - 1) * i_ref_stride,
+												i_ref_stride,
+												ext_y,
+												i_ext_stride,
+												i_cx_width,
+												i_cx_height + i_filter_size - 1,
+												h->param.sps.i_bit_depth_c);
+		ip->ip_filter_ver_chroma_s_s[i_y_frac](ext_y + (i_half_filter_size - 1) * i_ext_stride,
+												i_ext_stride,
+												dst_cr,
+												i_dst_stride,
+												i_cx_width,
+												i_cx_height,
+												h->param.sps.i_bit_depth_c);
 	}
 }
 
 void x265_prediction_x_weighted_average( x265_t *h,
-										x265_simage_t* p_simage_src0,
-										x265_simage_t* p_simage_src1,
+										x265_short_image_t* p_short_image_src0,
+										x265_short_image_t* p_short_image_src1,
 										int32_t i_ref_idx0,
 										int32_t i_ref_idx1,
 										uint32_t i_part_idx,
@@ -1727,16 +1645,16 @@ void x265_prediction_x_weighted_average( x265_t *h,
 	{
 		x265_image_add_avg(h,
 							*pp_image_dst,
-							p_simage_src0,
-							p_simage_src1,
+							p_short_image_src0,
+							p_short_image_src1,
 							i_part_idx,
 							i_width,
 							i_height );
 	}
 	else if ( i_ref_idx0 >= 0 && i_ref_idx1 <  0 )
 	{
-		x265_simage_copy_part_to_part_simage_p(h,
-											p_simage_src0,
+		x265_short_image_copy_part_to_part_short_image_p(h,
+											p_short_image_src0,
 											*pp_image_dst,
 											i_part_idx,
 											i_width,
@@ -1744,8 +1662,8 @@ void x265_prediction_x_weighted_average( x265_t *h,
 	}
 	else if ( i_ref_idx0 <  0 && i_ref_idx1 >= 0 )
 	{
-		x265_simage_copy_part_to_part_simage_p(h,
-											p_simage_src1,
+		x265_short_image_copy_part_to_part_short_image_p(h,
+											p_short_image_src1,
 											*pp_image_dst,
 											i_part_idx,
 											i_width,

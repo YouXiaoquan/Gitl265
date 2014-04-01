@@ -4,6 +4,9 @@
 #ifndef X265_WEIGHT_PREDICTION_H
 #define X265_WEIGHT_PREDICTION_H
 
+/** \file     weight_prediction.h
+    \brief    weighting prediction class (header)
+*/
 
 typedef struct
 {
@@ -28,8 +31,8 @@ void x265_weight_prediction_get_wp_scaling( x265_t *h,
 
 void x265_weight_prediction_add_weight_bi(x265_t *h,
 										x265_weight_prediction_t *weight_prediction,
-										x265_simage_t *p_image_src0,
-										x265_simage_t *p_image_src1,
+										x265_short_image_t *p_image_src0,
+										x265_short_image_t *p_image_src1,
 										uint32_t i_part_unit_idx,
 										uint32_t i_width,
 										uint32_t i_height,
@@ -39,7 +42,7 @@ void x265_weight_prediction_add_weight_bi(x265_t *h,
 										int32_t b_round ) ;
 void x265_weight_prediction_add_weight_uni(x265_t *h,
 											x265_weight_prediction_t *weight_prediction,
-											x265_simage_t *p_image_src0,
+											x265_short_image_t *p_image_src0,
 											uint32_t i_part_unit_idx,
 											uint32_t i_width,
 											uint32_t i_height,
@@ -48,7 +51,7 @@ void x265_weight_prediction_add_weight_uni(x265_t *h,
 void x265_weight_prediction_x_weighted_prediction_uni(x265_t *h,
 													x265_weight_prediction_t *weight_prediction,
 													x265_data_cu_t *cu,
-													x265_simage_t *p_image_src,
+													x265_short_image_t *p_image_src,
 													uint32_t i_part_addr,
 													int32_t i_width,
 													int32_t i_height,
@@ -58,8 +61,8 @@ void x265_weight_prediction_x_weighted_prediction_uni(x265_t *h,
 void x265_weight_prediction_x_weighted_prediction_bi(x265_t *h,
 													x265_weight_prediction_t *weight_prediction,
 													x265_data_cu_t *cu,
-													x265_simage_t *p_image_src0,
-													x265_simage_t *p_image_src1,
+													x265_short_image_t *p_image_src0,
+													x265_short_image_t *p_image_src1,
 													int32_t i_ref_idx0,
 													int32_t i_ref_idx1,
 													uint32_t i_part_idx,

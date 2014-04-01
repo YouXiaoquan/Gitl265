@@ -841,6 +841,7 @@ int x265_enc_slice_compress_and_encode_cu ( x265_t *h,
 			i_enc_cu_order < (enc_slice->i_bounding_cu_addr + (h->cu.pic.i_num_partitions - 1)) / h->cu.pic.i_num_partitions ;
 			i_cu_addr = h->cu_order_map[++i_enc_cu_order] )
 	{
+		// initialize CU encoder
 		x265_data_cu_init_cu ( h, h->data_cu, i_cu_addr ) ;
 
 		x265_pic_sym_load_prediction_data ( h, i_cu_addr ) ;

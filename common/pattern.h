@@ -4,7 +4,11 @@
 #ifndef X265_PATTERN_H
 #define X265_PATTERN_H
 
+/** \file     pattern.h
+    \brief    neighbouring pixel access classes (header)
+*/
 
+/// neighbouring pixel access class for one component
 typedef struct
 {
 	int32_t i_offset_left;
@@ -23,6 +27,7 @@ typedef struct
 
 } x265_pattern_class_static_t ;
 
+/// neighbouring pixel access class for all components
 typedef struct
 {
 	x265_pattern_param_t  pattern_y ;

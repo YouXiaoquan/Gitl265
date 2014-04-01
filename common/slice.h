@@ -3,6 +3,10 @@
 #ifndef X265_SLICE_H
 #define X265_SLICE_H
 
+/** \file     slice.h
+    \brief    slice header and SPS class (header)
+*/
+
 typedef struct
 {
 	int32_t b_sao_enabled_flag  ;

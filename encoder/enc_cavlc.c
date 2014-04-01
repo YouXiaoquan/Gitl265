@@ -4,7 +4,9 @@
 
 #include "common/common.h"
 
-
+/** \file     enc_cavlc.c
+    \brief    CAVLC encoder class
+*/
 
 
 void x265_enc_cavlc_determine_cabac_init_idx ( x265_t *h,
@@ -1297,7 +1299,11 @@ void x265_enc_cavlc_bit_rate_pic_rate_info_write ( x265_enc_entropy_if_t *enc_en
 }
 #endif
 
-
+/**
+ - write wavefront substreams sizes for the slice header.
+ .
+ \param slice Where we find the substream size information.
+ */
 int x265_enc_cavlc_code_tiles_wpp_entry_point( x265_t *h, x265_enc_entropy_if_t *enc_entropy_if,
 												bs_t *s, x265_slice_t *slice )
 {
@@ -1728,6 +1734,10 @@ void x265_enc_cavlc_x_write_ep_ex_golomb(x265_enc_entropy_if_t *enc_entropy_if,
 	return;
 }
 
+/** code explicit wp tables
+ * \param slice
+ * \returns Void
+ */
 void x265_enc_cavlc_x_code_pred_weight_table ( x265_t *h,
 											x265_enc_entropy_if_t *enc_entropy_if,
 											x265_slice_t *slice )
@@ -1821,6 +1831,9 @@ void x265_enc_cavlc_x_code_pred_weight_table ( x265_t *h,
 	}
 }
 
+/** code quantization matrix
+ *  \param scaling_list quantization matrix information
+ */
 void x265_enc_cavlc_code_scaling_list ( x265_t *h,
 										x265_enc_entropy_if_t *enc_entropy_if,
 										x265_scaling_list_t *scaling_list )

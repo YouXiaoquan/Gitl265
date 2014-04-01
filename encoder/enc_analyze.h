@@ -4,6 +4,9 @@
 #ifndef X265_ENCODER_ANALYZE_H
 #define X265_ENCODER_ANALYZE_H
 
+/** \file     enc_analyze.h
+    \brief    encoder analyzer class (header)
+*/
 
 typedef struct
 {

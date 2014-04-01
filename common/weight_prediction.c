@@ -2,14 +2,16 @@
 
 #include "common.h"
 
+/** \file     weight_prediction.c
+    \brief    weighting prediction class
+*/
 
 
-
-spixel weight_bidir_y(x265_t *h,
+short_pixel weight_bidir_y(x265_t *h,
 					int32_t i_w0,
-					spixel i_p0,
+					short_pixel i_p0,
 					int32_t i_w1,
-					spixel i_p1,
+					short_pixel i_p1,
 					int32_t i_round,
 					int32_t i_shift,
 					int32_t i_offset)
@@ -19,11 +21,11 @@ spixel weight_bidir_y(x265_t *h,
 							+ i_round + (i_offset << (i_shift - 1))) >> i_shift ) );
 }
 
-spixel weight_bidir_c(x265_t *h,
+short_pixel weight_bidir_c(x265_t *h,
 					int32_t i_w0,
-					spixel i_p0,
+					short_pixel i_p0,
 					int32_t i_w1,
-					spixel i_p1,
+					short_pixel i_p1,
 					int32_t i_round,
 					int32_t i_shift,
 					int32_t i_offset)
@@ -33,9 +35,9 @@ spixel weight_bidir_c(x265_t *h,
 							+ i_round + (i_offset << (i_shift - 1))) >> i_shift ) );
 }
 
-spixel weight_unidir_y(x265_t *h,
+short_pixel weight_unidir_y(x265_t *h,
 					int32_t i_w0,
-					spixel i_p0,
+					short_pixel i_p0,
 					int32_t i_round,
 					int32_t i_shift,
 					int32_t i_offset)
@@ -44,9 +46,9 @@ spixel weight_unidir_y(x265_t *h,
 							+ i_round) >> i_shift ) + i_offset );
 }
 
-spixel weight_unidir_c(x265_t *h,
+short_pixel weight_unidir_c(x265_t *h,
 					int32_t i_w0,
-					spixel i_p0,
+					short_pixel i_p0,
 					int32_t i_round,
 					int32_t i_shift,
 					int32_t i_offset)
@@ -87,11 +89,21 @@ void x265_weight_prediction_deinit ( x265_weight_prediction_t *weight_prediction
 
 }
 
-
+/** weighted averaging for bi-pred
+ * \param TComYuv* p_image_src0
+ * \param TComYuv* p_image_src1
+ * \param i_part_unit_idx
+ * \param i_width
+ * \param i_height
+ * \param wpScalingParam *wp0
+ * \param wpScalingParam *wp1
+ * \param TComYuv* p_image_dst
+ * \returns Void
+ */
 void x265_weight_prediction_add_weight_bi(x265_t *h,
 										x265_weight_prediction_t *weight_prediction,
-										x265_simage_t *p_image_src0,
-										x265_simage_t *p_image_src1,
+										x265_short_image_t *p_image_src0,
+										x265_short_image_t *p_image_src1,
 										uint32_t i_part_unit_idx,
 										uint32_t i_width,
 										uint32_t i_height,
@@ -101,12 +113,12 @@ void x265_weight_prediction_add_weight_bi(x265_t *h,
 										int32_t b_round )
 {
 	int32_t x, y;
-	spixel *p_src_y0 = NULL;
-	spixel *p_src_u0 = NULL;
-	spixel *p_src_v0 = NULL;
-	spixel *p_src_y1 = NULL;
-	spixel *p_src_u1 = NULL;
-	spixel *p_src_v1 = NULL;
+	short_pixel *p_src_y0 = NULL;
+	short_pixel *p_src_u0 = NULL;
+	short_pixel *p_src_v0 = NULL;
+	short_pixel *p_src_y1 = NULL;
+	short_pixel *p_src_u1 = NULL;
+	short_pixel *p_src_v1 = NULL;
 	pixel *p_dst_y = NULL;
 	pixel *p_dst_u = NULL;
 	pixel *p_dst_v = NULL;
@@ -122,12 +134,12 @@ void x265_weight_prediction_add_weight_bi(x265_t *h,
 	uint32_t i_dst_stride = 0;
 
 
-	p_src_y0 = x265_simage_get_luma_addr_p3(h, p_image_src0, i_part_unit_idx );
-	p_src_u0 = x265_simage_get_cb_addr_p3(h, p_image_src0, i_part_unit_idx );
-	p_src_v0 = x265_simage_get_cr_addr_p3(h, p_image_src0, i_part_unit_idx );
-	p_src_y1 = x265_simage_get_luma_addr_p3(h, p_image_src1, i_part_unit_idx );
-	p_src_u1 = x265_simage_get_cb_addr_p3(h, p_image_src1, i_part_unit_idx );
-	p_src_v1 = x265_simage_get_cr_addr_p3(h, p_image_src1, i_part_unit_idx );
+	p_src_y0 = x265_short_image_get_luma_addr_p3(h, p_image_src0, i_part_unit_idx );
+	p_src_u0 = x265_short_image_get_cb_addr_p3(h, p_image_src0, i_part_unit_idx );
+	p_src_v0 = x265_short_image_get_cr_addr_p3(h, p_image_src0, i_part_unit_idx );
+	p_src_y1 = x265_short_image_get_luma_addr_p3(h, p_image_src1, i_part_unit_idx );
+	p_src_u1 = x265_short_image_get_cb_addr_p3(h, p_image_src1, i_part_unit_idx );
+	p_src_v1 = x265_short_image_get_cr_addr_p3(h, p_image_src1, i_part_unit_idx );
 	p_dst_y = x265_image_get_luma_addr_p3(h, p_image_dst, i_part_unit_idx );
 	p_dst_u = x265_image_get_cb_addr_p3(h, p_image_dst, i_part_unit_idx );
 	p_dst_v = x265_image_get_cr_addr_p3(h, p_image_dst, i_part_unit_idx );
@@ -140,8 +152,8 @@ void x265_weight_prediction_add_weight_bi(x265_t *h,
 	i_round = i_shift ? (1 << (i_shift - 1)) * b_round:0;
 	i_w1 = wp1[0].w;
 
-	i_src0_stride = x265_simage_get_stride(p_image_src0);
-	i_src1_stride = x265_simage_get_stride(p_image_src1);
+	i_src0_stride = x265_short_image_get_stride(p_image_src0);
+	i_src1_stride = x265_short_image_get_stride(p_image_src1);
 	i_dst_stride  = x265_image_get_stride(p_image_dst);
 
 	for ( y = i_height-1; y >= 0; y-- )
@@ -200,8 +212,8 @@ void x265_weight_prediction_add_weight_bi(x265_t *h,
 	i_round = i_shift ? (1 << (i_shift - 1)) : 0;
 	i_w1 = wp1[1].w;
 
-	i_src0_stride = x265_simage_get_c_stride(p_image_src0);
-	i_src1_stride = x265_simage_get_c_stride(p_image_src1);
+	i_src0_stride = x265_short_image_get_c_stride(p_image_src0);
+	i_src1_stride = x265_short_image_get_c_stride(p_image_src1);
 	i_dst_stride = x265_image_get_c_stride(p_image_dst);
 
 	i_width  >>=1;
@@ -273,10 +285,18 @@ void x265_weight_prediction_add_weight_bi(x265_t *h,
 	}
 }
 
-
+/** weighted averaging for uni-pred
+ * \param TComYuv* p_image_src0
+ * \param i_part_unit_idx
+ * \param i_width
+ * \param i_height
+ * \param wpScalingParam *wp0
+ * \param TComYuv* p_image_dst
+ * \returns Void
+ */
 void x265_weight_prediction_add_weight_uni(x265_t *h,
 											x265_weight_prediction_t *weight_prediction,
-											x265_simage_t *p_image_src0,
+											x265_short_image_t *p_image_src0,
 											uint32_t i_part_unit_idx,
 											uint32_t i_width,
 											uint32_t i_height,
@@ -284,9 +304,9 @@ void x265_weight_prediction_add_weight_uni(x265_t *h,
 											x265_image_t* p_image_dst )
 {
 	int32_t x, y;
-	spixel *p_src_y0 = NULL;
-	spixel *p_src_u0 = NULL;
-	spixel *p_src_v0 = NULL;
+	short_pixel *p_src_y0 = NULL;
+	short_pixel *p_src_u0 = NULL;
+	short_pixel *p_src_v0 = NULL;
 	pixel *p_dst_y = NULL;
 	pixel *p_dst_u = NULL;
 	pixel *p_dst_v = NULL;
@@ -300,9 +320,9 @@ void x265_weight_prediction_add_weight_uni(x265_t *h,
 	uint32_t i_dst_stride = 0;
 
 
-	p_src_y0 = x265_simage_get_luma_addr_p3(h, p_image_src0, i_part_unit_idx );
-	p_src_u0 = x265_simage_get_cb_addr_p3(h, p_image_src0, i_part_unit_idx );
-	p_src_v0 = x265_simage_get_cr_addr_p3(h, p_image_src0, i_part_unit_idx );
+	p_src_y0 = x265_short_image_get_luma_addr_p3(h, p_image_src0, i_part_unit_idx );
+	p_src_u0 = x265_short_image_get_cb_addr_p3(h, p_image_src0, i_part_unit_idx );
+	p_src_v0 = x265_short_image_get_cr_addr_p3(h, p_image_src0, i_part_unit_idx );
 	p_dst_y = x265_image_get_luma_addr_p3(h, p_image_dst, i_part_unit_idx );
 	p_dst_u = x265_image_get_cb_addr_p3(h, p_image_dst, i_part_unit_idx );
 	p_dst_v = x265_image_get_cr_addr_p3(h, p_image_dst, i_part_unit_idx );
@@ -313,7 +333,7 @@ void x265_weight_prediction_add_weight_uni(x265_t *h,
 	i_shift_num = X265_IF_INTERNAL_PREC - h->param.sps.i_bit_depth_y;
 	i_shift = wp0[0].shift + i_shift_num;
 	i_round = i_shift ? (1 << (i_shift - 1)) : 0;
-	i_src0_stride = x265_simage_get_stride(p_image_src0);
+	i_src0_stride = x265_short_image_get_stride(p_image_src0);
 	i_dst_stride = x265_image_get_stride(p_image_dst);
 
 	for ( y = i_height-1; y >= 0; y-- )
@@ -361,7 +381,7 @@ void x265_weight_prediction_add_weight_uni(x265_t *h,
 	i_shift = wp0[1].shift + i_shift_num;
 	i_round = i_shift ? (1 << (i_shift - 1)) : 0;
 
-	i_src0_stride = x265_simage_get_c_stride(p_image_src0);
+	i_src0_stride = x265_short_image_get_c_stride(p_image_src0);
 	i_dst_stride = x265_image_get_c_stride(p_image_dst);
 
 	i_width  >>=1;
@@ -511,11 +531,23 @@ void x265_weight_prediction_get_wp_scaling( x265_t *h,
 	}
 }
 
+/** weighted prediction for bi-pred
+ * \param TComDataCU* cu
+ * \param TComYuv* p_image_src0
+ * \param TComYuv* p_image_src1
+ * \param i_ref_idx0
+ * \param i_ref_idx1
+ * \param i_part_idx
+ * \param i_width
+ * \param i_height
+ * \param TComYuv* p_image_dst
+ * \returns Void
+ */
 void x265_weight_prediction_x_weighted_prediction_bi(x265_t *h,
 													x265_weight_prediction_t *weight_prediction,
 													x265_data_cu_t *cu,
-													x265_simage_t *p_image_src0,
-													x265_simage_t *p_image_src1,
+													x265_short_image_t *p_image_src0,
+													x265_short_image_t *p_image_src1,
 													int32_t i_ref_idx0,
 													int32_t i_ref_idx1,
 													uint32_t i_part_idx,
@@ -578,11 +610,22 @@ void x265_weight_prediction_x_weighted_prediction_bi(x265_t *h,
 	}
 }
 
-
+/** weighted prediction for uni-pred
+ * \param TComDataCU* cu
+ * \param TComYuv* p_image_src
+ * \param i_part_addr
+ * \param i_width
+ * \param i_height
+ * \param i_ref_pic_list
+ * \param TComYuv*& pp_image_pred
+ * \param iPartIdx
+ * \param i_ref_idx
+ * \returns Void
+ */
 void x265_weight_prediction_x_weighted_prediction_uni(x265_t *h,
 													x265_weight_prediction_t *weight_prediction,
 													x265_data_cu_t *cu,
-													x265_simage_t *p_image_src,
+													x265_short_image_t *p_image_src,
 													uint32_t i_part_addr,
 													int32_t i_width,
 													int32_t i_height,

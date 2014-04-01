@@ -1,6 +1,7 @@
 
-
-
+/** \file     enc_sbac.c
+    \brief    SBAC encoder class
+*/
 
 #include "common/common.h"
 
@@ -232,6 +233,10 @@ void x265_enc_sbac_print_cabac_state ( x265_enc_entropy_if_t *enc_entropy_if )
 	enc_sbac->enc_bin_if->print_cabac_state(enc_sbac->enc_bin_if) ;
 }
 
+/** The function does the following:
+ * If current slice type is P/B then it determines the distance of initialisation type 1 and 2 from the current CABAC states and
+ * stores the index of the closest table.  This index is used for the next P/B slice when cabac_init_present_flag is true.
+ */
 void x265_enc_sbac_determine_cabac_init_idx ( x265_t *h,
 												x265_enc_entropy_if_t *enc_entropy_if,
 												enum slice_type_e i_slice_type,
@@ -246,7 +251,8 @@ void x265_enc_sbac_determine_cabac_init_idx ( x265_t *h,
 													i_slice_qp ) ;
 }
 
-
+/** The function does the followng: Write out terminate bit. Flush CABAC. Intialize CABAC states. Start CABAC.
+ */
 void x265_enc_sbac_update_context_tables_p4( x265_enc_entropy_if_t *enc_entropy_if,
 											enum slice_type_e i_slice_type,
 											int32_t i_slice_qp,
@@ -540,6 +546,11 @@ void x265_enc_sbac_code_part_size( x265_t* h,
 	}
 }
 
+/** code prediction mode
+ * \param cu
+ * \param i_abs_part_idx
+ * \returns Void
+ */
 void x265_enc_sbac_code_pred_mode( x265_enc_entropy_if_t* enc_entropy_if,
 									x265_data_cu_t* cu,
 									uint32_t i_abs_part_idx )
@@ -574,6 +585,7 @@ void x265_enc_sbac_code_cu_transquant_bypass_flag( x265_enc_entropy_if_t* enc_en
 #define DTRACE_CABAC_R( x,y ) if ( ( h->symbol_counter >= X265_COUNTER_START && h->symbol_counter <= X265_COUNTER_END )|| h->just_do_it ) fprintf( h->trace, x,    y );
 #define DTRACE_CABAC_N        if ( ( h->symbol_counter >= X265_COUNTER_START && h->symbol_counter <= X265_COUNTER_END )|| h->just_do_it ) fprintf( h->trace, "\n"    );
 #endif
+
 /** code skip flag
  * \param cu_
  * \param i_abs_part_idx
@@ -1530,6 +1542,9 @@ void x265_enc_sbac_code_coeff_nxn( x265_t* h,
 	return;
 }
 
+/** code SAO offset sign
+ * \param code sign value
+ */
 void x265_enc_sbac_code_sao_sign( x265_enc_entropy_if_t* enc_entropy_if,
 									uint32_t code )
 {
@@ -1572,7 +1587,10 @@ void x265_enc_sbac_code_sao_max_uvlc( x265_enc_entropy_if_t* enc_entropy_if,
 	}
 }
 
-
+/** Code SAO EO class or BO band position
+ * \param length
+ * \param code
+ */
 void x265_enc_sbac_code_sao_uflc ( x265_enc_entropy_if_t* enc_entropy_if,
 									uint32_t length,
 									uint32_t code )
@@ -1583,6 +1601,9 @@ void x265_enc_sbac_code_sao_uflc ( x265_enc_entropy_if_t* enc_entropy_if,
 	enc_sbac->enc_bin_if->encode_bins_ep ( enc_sbac->enc_bin_if, code, length );
 }
 
+/** Code SAO merge flags
+ * \param code
+ */
 void x265_enc_sbac_code_sao_merge ( x265_enc_entropy_if_t* enc_entropy_if,
 									uint32_t code )
 {
@@ -1599,6 +1620,9 @@ void x265_enc_sbac_code_sao_merge ( x265_enc_entropy_if_t* enc_entropy_if,
 	}
 }
 
+/** Code SAO type index
+ * \param code
+ */
 void x265_enc_sbac_code_sao_type_idx ( x265_enc_entropy_if_t* enc_entropy_if,
 										uint32_t code)
 {
@@ -1616,7 +1640,12 @@ void x265_enc_sbac_code_sao_type_idx ( x265_enc_entropy_if_t* enc_entropy_if,
 	}
 }
 
-
+/*!
+ ****************************************************************************
+ * \brief
+ *   estimate bit cost for CBP, significant map and significant coefficients
+ ****************************************************************************
+ */
 void x265_enc_sbac_est_bit( x265_t *h,
 							x265_enc_entropy_if_t *enc_entropy_if,
 							x265_est_bits_sbac_struct_t* est_bits_sbac,
@@ -1647,7 +1676,12 @@ void x265_enc_sbac_est_bit( x265_t *h,
 													i_text_type );
 }
 
-
+/*!
+ ****************************************************************************
+ * \brief
+ *    estimate bit cost for each CBP bit
+ ****************************************************************************
+ */
 void x265_enc_sbac_est_cbf_bit( x265_enc_sbac_t* enc_sbac,
 								x265_est_bits_sbac_struct_t* est_bits_sbac )
 {
@@ -1683,7 +1717,12 @@ void x265_enc_sbac_est_cbf_bit( x265_enc_sbac_t* enc_sbac,
 	}
 }
 
-
+/*!
+ ****************************************************************************
+ * \brief
+ *    estimate SAMBAC bit cost for significant coefficient group map
+ ****************************************************************************
+ */
 void x265_enc_sbac_est_significant_coeff_group_map_bit( x265_enc_sbac_t* enc_sbac,
 														x265_est_bits_sbac_struct_t* est_bits_sbac,
 														enum text_type_e i_text_type )
@@ -1709,7 +1748,12 @@ void x265_enc_sbac_est_significant_coeff_group_map_bit( x265_enc_sbac_t* enc_sba
 }
 
 
-
+/*!
+ ****************************************************************************
+ * \brief
+ *    estimate SAMBAC bit cost for significant coefficient map
+ ****************************************************************************
+ */
 void x265_enc_sbac_est_significant_map_bit( x265_t* h,
 											x265_enc_sbac_t* enc_sbac,
 											x265_est_bits_sbac_struct_t* est_bits_sbac,
@@ -1815,6 +1859,12 @@ void x265_enc_sbac_est_significant_map_bit( x265_t* h,
 	est_bits_sbac->last_y_bits[i_ctx] = i_bits_y;
 }
 
+/*!
+ ****************************************************************************
+ * \brief
+ *    estimate bit cost of significant coefficient
+ ****************************************************************************
+ */
 void x265_enc_sbac_est_significant_coefficients_bit( x265_enc_sbac_t* enc_sbac,
 													x265_est_bits_sbac_struct_t* est_bits_sbac,
 													enum text_type_e i_text_type )
@@ -1879,8 +1929,11 @@ void x265_enc_sbac_est_significant_coefficients_bit( x265_enc_sbac_t* enc_sbac,
 	}
 }
 
-
-
+/**
+ - Initialize our context information from the nominated source.
+ .
+ \param pSrc From where to copy context information.
+ */
 void x265_enc_sbac_x_copy_contexts_from( x265_enc_sbac_t* enc_sbac, x265_enc_sbac_t* src_enc_sbac )
 {
 	enc_sbac->enc_bin_if->x_copy_contexts_from ( enc_sbac->enc_bin_if,

@@ -1,41 +1,78 @@
 
+/** \file     base_data_cu.c
+    \brief    CU data structure
+    \todo     not all entities are documented
+*/
 
 #include "common.h"
+
 
 
 const uint8_t convert_txt_type_to_idx [4] = { 0, 1, 1, 2 } ;
 
 
-
+/** Check whether 2 addresses point to the same column
+   * \param i_addr_a          First address in raster scan order
+   * \param i_addr_b          Second address in raters scan order
+   * \param i_num_units_per_row Number of units in a row
+   * \return Result of test
+   */
 int32_t x265_raster_address_is_equal_col( int32_t i_addr_a, int32_t i_addr_b, int32_t i_num_units_per_row )
 {
 	return (( i_addr_a ^ i_addr_b ) &  ( i_num_units_per_row - 1 ) ) == 0;
 }
 
+/** Check whether 2 addresses point to the same row
+   * \param i_addr_a          First address in raster scan order
+   * \param i_addr_b          Second address in raters scan order
+   * \param i_num_units_per_row Number of units in a row
+   * \return Result of test
+   */
 int32_t x265_raster_address_is_equal_row( int32_t i_addr_a, int32_t i_addr_b, int32_t i_num_units_per_row )
 {
 	return (( i_addr_a ^ i_addr_b ) &~ ( i_num_units_per_row - 1 ) ) == 0;
 }
 
+/** Check whether 2 addresses point to the same row or column
+   * \param i_addr_a          First address in raster scan order
+   * \param i_addr_b          Second address in raters scan order
+   * \param i_num_units_per_row Number of units in a row
+   * \return Result of test
+   */
 int32_t x265_raster_address_is_equal_row_or_col( int32_t i_addr_a, int32_t i_addr_b, int32_t i_num_units_per_row )
 {
 	return x265_raster_address_is_equal_col (i_addr_a, i_addr_b, i_num_units_per_row)
 			|| x265_raster_address_is_equal_row (i_addr_a, i_addr_b, i_num_units_per_row) ;
 }
 
+/** Check whether one address points to the first column
+   * \param i_addr           Address in raster scan order
+   * \param i_num_units_per_row Number of units in a row
+   * \return Result of test
+   */
 int32_t x265_raster_address_is_zero_col( int32_t i_addr, int32_t i_num_units_per_row )
 {
 	// i_addr % i_num_units_per_row == 0
 	return ( i_addr & ( i_num_units_per_row - 1 ) ) == 0;
 }
 
+/** Check whether one address points to the first row
+   * \param i_addr           Address in raster scan order
+   * \param i_num_units_per_row Number of units in a row
+   * \return Result of test
+   */
 int32_t x265_raster_address_is_zero_row( int32_t i_addr, int32_t i_num_units_per_row )
 {
 	// i_addr / i_num_units_per_row == 0
 	return ( i_addr &~ ( i_num_units_per_row - 1 ) ) == 0;
 }
 
-
+/** Check whether one address points to a column whose index is smaller than a given value
+   * \param i_addr           Address in raster scan order
+   * \param i_val            Given column index value
+   * \param i_num_units_per_row Number of units in a row
+   * \return Result of test
+   */
 int32_t x265_raster_address_less_than_col( int32_t i_addr,
 											int32_t i_val,
 											int32_t i_num_units_per_row )
@@ -43,6 +80,12 @@ int32_t x265_raster_address_less_than_col( int32_t i_addr,
 	return (i_addr & (i_num_units_per_row - 1)) < i_val ;
 }
 
+/** Check whether one address points to a row whose index is smaller than a given value
+   * \param i_addr           Address in raster scan order
+   * \param i_val            Given row index value
+   * \param i_num_units_per_row Number of units in a row
+   * \return Result of test
+   */
 int32_t x265_raster_address_less_than_row( int32_t i_addr,
 											int32_t i_val,
 											int32_t i_num_units_per_row )
@@ -559,6 +602,11 @@ int32_t x265_base_data_cu_get_last_valid_part_idx ( x265_base_data_cu_t *base_da
 	return i_last_valid_part_idx;
 }
 
+/** Check whether the current PU and a spatial neighboring PU are in a same ME region.
+ * \param i_x_n, i_y_n   location of the upper-left corner pixel of a neighboring PU
+ * \param i_x_p, i_y_p   location of the upper-left corner pixel of the current PU
+ * \returns Bool
+ */
 int32_t x265_base_data_cu_is_diff_mer ( x265_t *h,
 										x265_base_data_cu_t *base_data_cu,
 										int32_t i_x_n,
@@ -587,6 +635,10 @@ uint32_t x265_base_data_cu_get_scu_addr( x265_t *h, x265_base_data_cu_t *base_da
 	       * (1 << (h->sps[0].i_max_cu_depth << 1)) + base_data_cu->i_abs_idx_in_lcu ;
 }
 
+/** Check whether the CU is coded in lossless coding mode
+ * \param   i_abs_part_idx
+ * \returns true if the CU is coded in lossless coding mode; false if otherwise
+ */
 int32_t x265_base_data_cu_is_lossless_coded ( x265_t *h,
 											x265_base_data_cu_t *base_data_cu,
 											uint32_t i_abs_part_idx )
@@ -787,7 +839,10 @@ fail:
 }
 
 
-
+/** Test whether the current block is skipped
+ * \param i_part_idx Block index
+ * \returns Flag indicating whether the block is skipped
+ */
 int32_t x265_base_data_cu_is_skipped ( x265_base_data_cu_t *base_data_cu, uint32_t i_part_idx )
 {
 	return (x265_base_data_cu_get_skip_flag_p2(base_data_cu, i_part_idx)) ;
@@ -1041,6 +1096,12 @@ void x265_base_data_cu_set_tr_idx_sub_parts ( x265_t *h,
 
 }
 
+/** Set a I_PCM flag for all sub-partitions of a partition.
+ * \param b_pcm_flag I_PCM flag
+ * \param i_abs_part_idx patition index
+ * \param i_depth CU depth
+ * \returns Void
+ */
 void x265_base_data_cu_set_ipcm_flag_sub_parts ( x265_t *h,
 												x265_base_data_cu_t* base_data_cu,
 												int32_t b_pcm_flag,

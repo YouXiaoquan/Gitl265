@@ -3,6 +3,9 @@
 
 #include "common.h"
 
+/** \file     motion_info.c
+    \brief    motion information handling classes
+*/
 
 x265_mv_field_t *x265_mv_field_new ()
 {
@@ -240,6 +243,10 @@ void x265_cu_mv_field_clear_mv_field( x265_cu_mv_field_t *cu_mv_field )
 			cu_mv_field->i_num_partition * sizeof(*cu_mv_field->ref_idx));
 }
 
+/**Subsampling of the stored prediction mode, reference index and motion vector
+ * \param pred_mode Pointer to prediction modes
+ * \param i_scale      Factor by which to subsample motion information
+ */
 void x265_cu_mv_field_compress ( x265_cu_mv_field_t *cu_mv_field,
 								int8_t * pred_mode, int32_t i_scale )
 {

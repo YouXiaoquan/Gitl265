@@ -1,5 +1,7 @@
 
-
+/** \file     enc_gop.c
+    \brief    GOP encoder class
+*/
 
 #include "common/common.h"
 #include "enc_gop.h"
@@ -254,6 +256,7 @@ int x265_enc_gop_encoder_slice( x265_t *h,
     	enc_gop->i_last_idr = h->fenc->i_poc ;
     }
 
+    //  Slice data initialization
     x265_enc_slice_initialize ( h, h->fenc, h->enc_top.i_poc_last, h->fenc->i_poc, h->enc_top.i_num_frame_rcvd,
     							h->enc_top.i_gop_id, &slice ) ;
     slice->i_last_idr = enc_gop->i_last_idr ;
@@ -288,6 +291,8 @@ int x265_enc_gop_encoder_slice( x265_t *h,
     {
     	slice->i_slice_type = P_SLICE ;
     }
+
+    // Set the nal unit type
     slice->i_naul_type = x265_enc_gop_get_nal_unit_type ( h, &h->enc_gop, h->fenc->i_poc ) ;
     if ( NAL_SLICE_TRAIL_R == slice->i_naul_type )
     {
@@ -296,6 +301,8 @@ int x265_enc_gop_encoder_slice( x265_t *h,
     		slice->i_naul_type = NAL_SLICE_TRAIL_N ;
     	}
     }
+
+    // Do decoding refresh marking if any
     x265_slice_decoding_refresh_marking ( h, slice, &enc_gop->i_poc_cra, &enc_gop->b_refresh_pending ) ;
     x265_slice_select_reference_picture_set ( h, slice, h->fenc->i_poc, h->enc_top.i_gop_id ) ;
     slice->rps->i_number_of_longterm_pictures = 0 ;
@@ -380,8 +387,10 @@ int x265_enc_gop_encoder_slice( x265_t *h,
     		X265_MIN ( h->param.gop.gop_list[h->enc_top.i_gop_id].i_num_ref_pics_active,
     				slice->rps->i_number_of_pictures );
 
+    //  Set reference list
     x265_slice_set_ref_pic_list ( h, slice ) ;
 
+    //  Slice info. refinement
     if ( ( B_SLICE == slice->i_slice_type ) && ( 0 == h->i_ref[REF_PIC_LIST_1] ) )
     {
     	slice->i_slice_type = P_SLICE ;
@@ -427,6 +436,7 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 
     i_col_dir = 1-i_col_dir;
 
+    //-------------------------------------------------------------
     x265_slice_set_ref_poc_list ( h ) ;
 
     slice->b_no_back_pred_flag = 0  ;
@@ -454,12 +464,13 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 
     if ( 2 == h->param.sps.i_tmvp_mode_id )
     {
-    	if (0 == h->enc_top.i_gop_id )
+    	if (0 == h->enc_top.i_gop_id ) // first picture in SOP (i.e. forward B)
     	{
     		slice->b_enable_tmvp_flag = 0 ;
     	}
     	else
     	{
+    		 // Note: pcSlice->getColFromL0Flag() is assumed to be always 0 and getcolRefIdx() is always 0.
     		slice->b_enable_tmvp_flag = 1 ;
     	}
     }
@@ -472,6 +483,8 @@ int x265_enc_gop_encoder_slice( x265_t *h,
     	slice->b_enable_tmvp_flag = 0 ;
     }
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////// Compress a slice
+    //  Slice compression
     if ( h->param.b_use_asr )
     {
     	x265_enc_slice_set_search_range ( h, &h->enc_slice, slice ) ;
@@ -527,8 +540,10 @@ int x265_enc_gop_encoder_slice( x265_t *h,
     }
     i_read_end_address = i_external_address * h->cu.pic.i_num_partitions + i_internal_address ;
 
+    // Allocate some coders, now we know how many tiles there are.
     i_num_substreams = h->pps[0].i_num_substreams ;
 
+    // Allocate some coders, now we know how many tiles there are.
     create_wpp_coders ( h, i_num_substreams ) ;
     pc_sbac_coders = h->pc_sbac_coders ;
 	NOCHECKED_MALLOCZERO ( pc_substreams_out, i_num_substreams * sizeof ( x265_output_bitstream_t *) ) ;
@@ -537,14 +552,14 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 		pc_substreams_out[loop] = (x265_output_bitstream_t*)x265_output_bitstream_new () ;
 	}
 
-    i_start_cu_addr_slice_idx = 0 ;
-    i_start_cu_addr_slice    = 0 ;
-    slice->i_slice_cur_start_cu_addr = i_start_cu_addr_slice ;
+    i_start_cu_addr_slice_idx = 0 ; // used to index "m_uiStoredStartCUAddrForEncodingSlice" containing locations of slice boundaries
+    i_start_cu_addr_slice    = 0 ; // used to keep track of current slice's starting CU addr.
+    slice->i_slice_cur_start_cu_addr = i_start_cu_addr_slice ; // Setting "start CU addr" for current slice
     x265_uint_list_clear(enc_gop->stored_start_cu_addr_for_encoding_slice) ;
 
-    i_start_cu_addr_slice_segment_idx = 0 ;
-    i_start_cu_addr_slice_segment    = 0 ;
-    slice->i_slice_segment_cur_start_cu_addr = i_start_cu_addr_slice_segment ;
+    i_start_cu_addr_slice_segment_idx = 0 ; // used to index "m_uiStoredStartCUAddrForEntropyEncodingSlice" containing locations of slice boundaries
+    i_start_cu_addr_slice_segment    = 0 ; // used to keep track of current Dependent slice's starting CU addr.
+    slice->i_slice_segment_cur_start_cu_addr = i_start_cu_addr_slice_segment ; // Setting "start CU addr" for current Dependent slice
 
     x265_uint_list_clear(enc_gop->stored_start_cu_addr_for_encoding_slice_segment);
     i_next_cu_addr = 0;
@@ -557,6 +572,10 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 
 
     slice->b_next_slice = 1 ;
+
+    /* start slice NALunit */
+
+    //-- Loop filter
     h->loop_filter.b_lf_cross_tile_boundary = h->pps[0].b_loop_filter_across_tiles_enabled_flag ;
     if ( h->sps[0].b_use_sao )
     {
@@ -570,7 +589,7 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 
     //	x265_slice_print ( h, slice ) ;
     //	print_enc_slice ( h, &h->enc_slice ) ;
-    while(i_next_cu_addr<i_read_end_address)
+    while(i_next_cu_addr<i_read_end_address) // determine slice boundaries
     {
 		slice->b_next_slice = 0 ;
 		slice->b_next_slice_segment = 0 ;
@@ -582,9 +601,10 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 			x265_output_bitstream_clear ( pc_substreams_out[loop] ) ;
 		}
 
-		i_one_bitstream_per_slice_length = 0 ;
+		i_one_bitstream_per_slice_length = 0 ; // start of a new slice
 		pc_bitstream_redirect->write_alignOne ( (x265_bit_if_t*)pc_bitstream_redirect ) ;
 
+		// set entropy coder for writing
 		enc_sbac_init( &h->enc_sbac, (x265_enc_bin_if_t*)&h->enc_bin_cabac );
 		x265_enc_entropy_set_entropy_coder ( &h->enc_entropy,
 											(x265_enc_entropy_if_t*)&h->enc_sbac,
@@ -625,6 +645,7 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 										slice->i_slice_qp );
 		x265_enc_entropy_set_bitstream ( &h->enc_entropy,
 										(x265_bit_if_t*)pc_bitstream_redirect );
+		// for now, override the TILES_DECODER setting in order to write substreams.
 		x265_enc_entropy_set_bitstream ( &h->enc_entropy,
 										(x265_bit_if_t*)pc_substreams_out[0] );
 
@@ -641,9 +662,11 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 				|| (b_no_bin_bit_constraint_violated && h->param.i_slice_mode == FIXED_NUMBER_OF_LCU ) )
 		{
 			i_start_cu_addr_slice = slice->i_slice_cur_end_cu_addr ;
+				 // Reconstruction slice
 		    x265_uint_list_push_back(enc_gop->stored_start_cu_addr_for_encoding_slice,
 		    						i_start_cu_addr_slice );
 		    i_start_cu_addr_slice_idx++;
+		  // Dependent slice
 			if (i_start_cu_addr_slice_segment_idx > 0
 					&& x265_uint_list_get_element(enc_gop->stored_start_cu_addr_for_encoding_slice_segment,
 												i_start_cu_addr_slice_segment_idx-1) != i_start_cu_addr_slice)
@@ -683,8 +706,10 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 						? i_start_cu_addr_slice : i_start_cu_addr_slice_segment;
 
 
+			 // Construct the final bitstream by flushing and concatenating substreams.
+			 // The final bitstream is either nalu.m_Bitstream or pcBitstreamRedirect;
 	    substream_sizes = slice->substream_sizes ;
-	    i_total_coded_size = 0 ;
+	    i_total_coded_size = 0 ; // for padding calcs.
 	    i_num_substreams_per_tile = i_num_substreams;
 	    if (i_num_substreams > 1)
 	    {
@@ -692,6 +717,8 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 	    }
 	    for ( loop = 0 ; loop < i_num_substreams ; ++ loop )
 	    {
+	    	// Flush all substreams -- this includes empty ones.
+	    	// Terminating bit and flush.
 			x265_enc_entropy_set_entropy_coder ( &h->enc_entropy,
 												(x265_enc_entropy_if_t*)pc_sbac_coders[loop],
 												slice );
@@ -701,7 +728,8 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 			x265_enc_entropy_encode_terminating_bit ( &h->enc_entropy, 1 ) ;
 			x265_enc_entropy_encode_slice_finish ( &h->enc_entropy ) ;
 
-	    	x265_output_bitstream_write_byte_alignment ( pc_substreams_out[loop] ) ;
+	    	x265_output_bitstream_write_byte_alignment ( pc_substreams_out[loop] ) ;   // Byte-alignment in slice_data() at end of sub-stream
+	    	// Byte alignment is necessary between tiles when tiles are independent.
 
 	    	i_total_coded_size += pc_substreams_out[loop]->get_number_of_written_bits((x265_bit_if_t*)pc_substreams_out[loop]) ;
 
@@ -718,16 +746,19 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 	    	}
 	    }
 
+	  // Complete the slice header info.
 		x265_enc_entropy_set_entropy_coder ( &h->enc_entropy,
 											(x265_enc_entropy_if_t*)&h->enc_cavlc,
 											slice );
 
 		x265_enc_entropy_encode_tiles_wpp_entry_point( h, &h->enc_entropy, &h->out.bs, slice ) ;
 
+		 // Substreams...
 	    i_offs = 0;
 	    i_nss = h->pps[0].i_num_substreams ;
 	    if ( h->pps[0].b_entropy_coding_sync_enabled_flag )
 	    {
+	    	// 1st line present for WPP.
 	    	i_offs = slice->i_slice_segment_cur_start_cu_addr / h->cu.pic.i_num_partitions / h->cu.pic.i_width_in_cu ;
 	    	i_nss  = slice->i_num_entry_point_offsets + 1 ;
 	    }
@@ -738,6 +769,8 @@ int x265_enc_gop_encoder_slice( x265_t *h,
 	    }
 
 	    //	x265_output_bitstream_print ( &h->out.bs, "SliceHeader2" ) ;
+	    // If current NALU is the first NALU of slice (containing slice header) and more NALUs exist (due to multiple dependent slices) then buffer it.
+	    // If current NALU is the last NALU of slice and a NALU was buffered, then (a) Write current NALU (b) Update an write buffered NALU at approproate location in NALU list.
 	    x265_enc_gop_x_write_tile_location_to_slice_header ( h,
 	    													&h->out.bs,
 	    													&pc_bitstream_redirect,
@@ -754,6 +787,7 @@ int x265_enc_gop_encoder_slice( x265_t *h,
     frame_size = x265_encoder_frame_end ( h, pp_nal, pi_nal, pic_out ) ;
 
     x265_enc_gop_x_calculate_add_psnr(h, &h->enc_gop, frame_size, h->out.nal[0].b_long_start_code) ;
+    /* logging: insert a newline at end of picture period */
     printf("\n");
     fflush(stdout);
 
@@ -826,7 +860,10 @@ void x265_enc_gop_print_out_summary( x265_t *h,
 			x265_enc_gop_x_calculate_rvm(h, enc_gop) );
 }
 
-
+/** Determine the difference between consecutive tile sizes (in bytes) and writes it to  bistream rNalu [slice header]
+ * \param ppc_bitstream_redirect contains the bitstream to be concatenated to rNalu. rpcBitstreamRedirect contains slice payload. rpcSlice contains tile location information.
+ * \returns Updates rNalu to contain concatenated bitstream. rpcBitstreamRedirect is cleared at the end of this function call.
+ */
 void x265_enc_gop_x_write_tile_location_to_slice_header ( x265_t *h,
 															bs_t *s,
 															x265_output_bitstream_t **ppc_bitstream_redirect,

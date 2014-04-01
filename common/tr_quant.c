@@ -2,6 +2,9 @@
 
 #include "common.h"
 
+/** \file     tr_quant.c
+    \brief    transform and quantization class
+*/
 
 #define X265_RDOQ_CHROMA                 1           ///< use of RDOQ in chroma
 
@@ -233,6 +236,8 @@ int32_t x265_tr_quant_get_use_scaling_list ( x265_tr_quant_t *tr_quant )
 	return tr_quant->b_scaling_list_enabled_flag;
 }
 
+
+#if X265_ADAPTIVE_QP_SELECTION
 int32_t x265_tr_quant_get_qp_delta ( x265_tr_quant_t *tr_quant, int32_t i_qp )
 {
 	return tr_quant->qp_delta[i_qp];
@@ -247,7 +252,7 @@ double *x265_tr_quant_get_slice_sum_c ( x265_tr_quant_t *tr_quant )
 {
 	return tr_quant->slice_sum_c;
 }
-
+#endif
 
 
 
@@ -297,6 +302,7 @@ int x265_tr_quant_init (x265_t *h, x265_tr_quant_t *tr_quant )
 	}
 	x265_tr_quant_ic_rate_cost_init( tr_quant ) ;
 	x265_transform_initialize (&tr_quant->transform, h->param.cpu ) ;
+	x265_quant_initialize (&tr_quant->quant, h->param.cpu ) ;
 	return 0 ;
 
 fail:
@@ -505,12 +511,12 @@ void x265_tr_quant_clear_slice_arl_cnt ( x265_tr_quant_t *tr_quant )
 
 
 /** Set qP for Quantization.
- * \param qpy QPy
+ * \param i_qp_y QPy
  * \param bLowpass
  * \param eSliceType
- * \param eTxtType
- * \param qpBdOffset
- * \param chromaQPOffset
+ * \param i_text_type
+ * \param i_qp_bd_offset
+ * \param i_chroma_qp_offset
  *
  * return void
  */
@@ -740,6 +746,11 @@ void x_i_tr(x265_t *h,
 
 #else
 
+/** 4x4 forward transform implemented using partial butterfly structure (1D)
+ *  \param src   input data (residual)
+ *  \param dst   output data (transform coefficients)
+ *  \param i_shift specifies right shift after 1D transform
+ */
 void partial_butterfly4(int16_t *src,
 						int16_t *dst,
 						int32_t i_shift,
@@ -1430,14 +1441,14 @@ void x265_tr_quant_sign_bit_hiding_hdq(x265_tr_quant_t *tr_quant,
 }
 
 
-void x265_tr_quant_print_quant_residual (spixel *p_quant_residual,
+void x265_tr_quant_print_quant_residual (short_pixel *p_quant_residual,
 										uint32_t i_stride,
 										uint32_t i_width,
 										uint32_t i_height )
 {
 	FILE *file = NULL ;
 	static int32_t b_first_print_quant_residual = 1 ;
-	spixel *p_curr = NULL ;
+	short_pixel *p_curr = NULL ;
 	int32_t x = 0, y = 0 ;
 	static int ww = 0 ;
 	ww ++ ;
@@ -1536,14 +1547,14 @@ void x265_tr_quant_print_quant_des (x265_coeff_t *p_des, int32_t i_width, int32_
 }
 
 
-void x265_tr_quant_print_dequant_residual (spixel *p_dequant_residual,
+void x265_tr_quant_print_dequant_residual (short_pixel *p_dequant_residual,
 										uint32_t i_stride,
 										uint32_t i_width,
 										uint32_t i_height )
 {
 	FILE *file = NULL ;
 	static int32_t b_first_print_dequant_residual = 1 ;
-	spixel *p_curr = NULL ;
+	short_pixel *p_curr = NULL ;
 	int32_t x = 0, y = 0 ;
 
 	if ( b_first_print_dequant_residual )
@@ -1662,6 +1673,194 @@ void x265_tr_quant_print_int_state (int32_t i_state, int32_t i_width )
 	fclose ( file ) ;
 }
 
+/*
+#if X265_ADAPTIVE_QP_SELECTION
+void x265_tr_quant_x_quant_4x4_ssse3(int32_t *p_coef,
+									x265_coeff_t* p_q_coef1,
+									int32_t *p_quant_coeff,
+									int32_t *delta_u1,
+									int32_t i_add,
+									int32_t i_q_bits,
+									uint32_t *p_ac_sum,
+									int32_t b_use_adapt_qp_select,
+									int32_t *p_arl_coef1,
+									int32_t i_q_bits_c
+									) ;
+#else
+void x265_tr_quant_x_quant_4x4_ssse3(int32_t *p_coef,
+									x265_coeff_t* p_q_coef1,
+									int32_t *p_quant_coeff,
+									int32_t *delta_u1,
+									int32_t i_add,
+									int32_t i_q_bits,
+									uint32_t *p_ac_sum,
+									int32_t b_use_adapt_qp_select
+									) ;
+#endif
+
+#if X265_ADAPTIVE_QP_SELECTION
+void x265_tr_quant_x_quant_4x4_cmp(int32_t *p_coef,
+									x265_coeff_t* p_q_coef1,
+									int32_t *p_quant_coeff,
+									int32_t *delta_u1,
+									int32_t i_add,
+									int32_t i_q_bits,
+									uint32_t *p_ac_sum,
+									int32_t b_use_adapt_qp_select,
+									int32_t *p_arl_coef1,
+									int32_t i_q_bits_c
+									)
+#else
+void x265_tr_quant_x_quant_4x4_cmp(int32_t *p_coef,
+									x265_coeff_t* p_q_coef1,
+									int32_t *p_quant_coeff,
+									int32_t *delta_u1,
+									int32_t i_add,
+									int32_t i_q_bits,
+									uint32_t *p_ac_sum,
+									int32_t b_use_adapt_qp_select
+									)
+#endif
+{
+#define BLK_SIZE 4
+	int32_t p_arl_coef2[BLK_SIZE*BLK_SIZE] ;
+	int32_t delta_u2[BLK_SIZE*BLK_SIZE] ;
+	x265_coeff_t p_q_coef2[BLK_SIZE*BLK_SIZE] ;
+	uint32_t i_sum = 0 ;
+
+	memset(p_arl_coef2, 0, sizeof(int32_t) * BLK_SIZE * BLK_SIZE) ;
+	memset(delta_u2, 0, sizeof(int32_t) * BLK_SIZE * BLK_SIZE) ;
+	memset(p_q_coef2, 0, sizeof(x265_coeff_t) * BLK_SIZE * BLK_SIZE) ;
+#if X265_ADAPTIVE_QP_SELECTION
+	x265_tr_quant_x_quant_4x4_ssse3(p_coef,
+									p_q_coef2,
+									p_quant_coeff,
+									delta_u2,
+									i_add,
+									i_q_bits,
+									&i_sum,
+									b_use_adapt_qp_select,
+									p_arl_coef2,
+									i_q_bits_c) ;
+#else
+	x265_tr_quant_x_quant_4x4_ssse3(p_coef,
+									p_q_coef2,
+									p_quant_coeff,
+									delta_u2,
+									i_add,
+									i_q_bits,
+									&i_sum,
+									b_use_adapt_qp_select) ;
+
+#endif
+	if(memory_compare_int32(p_q_coef1, 4, p_q_coef2, 4, 4, 4))
+	{
+		exit(0) ;
+	}
+	if(memory_compare_int32(delta_u1, 4, delta_u2, 4, 4, 4))
+	{
+		fprintf (stderr, "delta_u Erroe\n") ;
+		exit(0) ;
+	}
+
+	if((*p_ac_sum) != i_sum)
+	{
+		fprintf(stderr, "%d != %d\n", (*p_ac_sum), i_sum) ;
+		exit(0) ;
+	}
+
+#if X265_ADAPTIVE_QP_SELECTION
+	if(memory_compare_int32(p_arl_coef1, 4, p_arl_coef2, 4, 4, 4))
+	{
+		fprintf (stderr, "p_arl_coef Erroe\n") ;
+		exit(0) ;
+	}
+#endif
+
+#undef BLK_SIZE
+}
+
+#if X265_ADAPTIVE_QP_SELECTION
+void x265_tr_quant_x_quant_4x4_c(int32_t *p_coef,
+								x265_coeff_t* p_q_coef,
+								int32_t *p_quant_coeff,
+								int32_t *delta_u,
+								int32_t i_add,
+								int32_t i_q_bits,
+								uint32_t *p_ac_sum,
+								int32_t b_use_adapt_qp_select,
+								int32_t *p_arl_coef,
+								int32_t i_q_bits_c)
+#else
+void x265_tr_quant_x_quant_4x4_c(int32_t *p_coef,
+								x265_coeff_t* p_q_coef,
+								int32_t *p_quant_coeff,
+								int32_t *delta_u,
+								int32_t i_add,
+								int32_t i_q_bits,
+								uint32_t *p_ac_sum,
+								int32_t b_use_adapt_qp_select)
+#endif
+{
+#define BLK_SIZE 4
+	int32_t loop = 0 ;
+	int32_t i_level = 0;
+	int32_t i_sign = 0;
+#if X265_ADAPTIVE_QP_SELECTION
+	int32_t i_tmp_level = 0 ;
+	int32_t i_add_c = 0 ;
+#endif
+	int32_t i_q_bits8 = 0 ;
+
+#if X265_ADAPTIVE_QP_SELECTION
+	i_add_c = 1 << (i_q_bits_c - 1) ;
+#endif
+	i_q_bits8 = i_q_bits - 8;
+	for( loop = 0; loop < BLK_SIZE*BLK_SIZE; loop++ )
+	{
+		i_level = p_coef[loop];
+		i_sign = (i_level < 0 ? -1: 1);
+
+#if X265_ADAPTIVE_QP_SELECTION
+		i_tmp_level = (int32_t)abs(i_level) * p_quant_coeff[loop];
+		if( b_use_adapt_qp_select )
+		{
+			p_arl_coef[loop] = (int32_t)((i_tmp_level + i_add_c ) >> i_q_bits_c);
+		}
+		i_level = (int32_t)((i_tmp_level + i_add ) >> i_q_bits);
+		delta_u[loop] = (int32_t)((i_tmp_level - (i_level<<i_q_bits) )>> i_q_bits8);
+#else
+		i_level = ((int32_t)abs(i_level) * p_quant_coeff[loop] + i_add ) >> i_q_bits;
+		delta_u[loop] = (int32_t)(((int32_t)abs(p_coef[loop]) * p_quant_coeff[loop] - (i_level << i_q_bits)) >> i_q_bits8 );
+#endif
+		*p_ac_sum += i_level;
+		i_level *= i_sign;
+		p_q_coef[loop] = x265_clip3_int32( i_level, -32768, 32767 );
+	}
+#if X265_ADAPTIVE_QP_SELECTION
+	x265_tr_quant_x_quant_4x4_cmp(p_coef,
+									p_q_coef,
+									p_quant_coeff,
+									delta_u,
+									i_add,
+									i_q_bits,
+									p_ac_sum,
+									b_use_adapt_qp_select,
+									p_arl_coef,
+									i_q_bits_c) ;
+#else
+	x265_tr_quant_x_quant_4x4_cmp(p_coef,
+									p_q_coef,
+									p_quant_coeff,
+									delta_u,
+									i_add,
+									i_q_bits,
+									p_ac_sum,
+									b_use_adapt_qp_select) ;
+#endif
+}
+*/
+
 void x265_tr_quant_x_quant(x265_t *h,
 							x265_tr_quant_t *tr_quant,
 							x265_data_cu_t* cu,
@@ -1676,7 +1875,6 @@ void x265_tr_quant_x_quant(x265_t *h,
 							enum text_type_e i_text_type,
 							uint32_t i_abs_part_idx )
 {
-	int32_t loop = 0 ;
 	int32_t *p_coef = NULL;
 	x265_coeff_t* p_q_coef = NULL;
 #if X265_ADAPTIVE_QP_SELECTION
@@ -1703,15 +1901,9 @@ void x265_tr_quant_x_quant(x265_t *h,
 	int32_t i_q_bits = 0;
 #if X265_ADAPTIVE_QP_SELECTION
 	int32_t i_q_bits_c = 0;
-	int32_t i_add_c = 0;
 #endif
-	int32_t i_q_bits8 = 0 ;
-	int32_t i_level = 0;
-	int32_t i_sign = 0;
-	uint32_t i_block_pos = 0;
-#if X265_ADAPTIVE_QP_SELECTION
-	int32_t i_tmp_level = 0 ;
-#endif
+	int32_t i_index = 0 ;
+	x265_quant_t *quant = NULL ;
 
 
 	p_coef = p_src;
@@ -1818,32 +2010,31 @@ void x265_tr_quant_x_quant(x265_t *h,
 		i_q_bits = X265_QUANT_SHIFT + qp_base.i_per + i_transform_shift;
 		i_add = (h->slice->i_slice_type == I_SLICE ? 171 : 85) << (i_q_bits-9);
 		i_q_bits_c = X265_QUANT_SHIFT + qp_base.i_per + i_transform_shift - X265_ARL_C_PRECISION;
-		i_add_c   = 1 << (i_q_bits_c-1);
 #endif
 
-		i_q_bits8 = i_q_bits-8;
-		for( loop = 0; loop < i_width*i_height; loop++ )
-		{
-			i_block_pos = loop;
-			i_level = p_coef[i_block_pos];
-			i_sign = (i_level < 0 ? -1: 1);
-
+		quant = &tr_quant->quant ;
+		i_index = h->global.convert_to_bit[i_width] ;
 #if X265_ADAPTIVE_QP_SELECTION
-			i_tmp_level = (int32_t)abs(i_level) * p_quant_coeff[i_block_pos];
-			if( tr_quant->b_use_adapt_qp_select )
-			{
-				p_arl_ccoef[i_block_pos] = (int32_t)((i_tmp_level + i_add_c ) >> i_q_bits_c);
-			}
-			i_level = (int32_t)((i_tmp_level + i_add ) >> i_q_bits);
-			delta_u[i_block_pos] = (int32_t)((i_tmp_level - (i_level<<i_q_bits) )>> i_q_bits8);
+		quant->quant[i_index](p_coef,
+								p_q_coef,
+								p_quant_coeff,
+								delta_u,
+								i_add,
+								i_q_bits,
+								p_ac_sum,
+								tr_quant->b_use_adapt_qp_select,
+								p_arl_ccoef,
+								i_q_bits_c) ;
 #else
-			i_level = ((int32_t)abs(i_level) * p_quant_coeff[i_block_pos] + i_add ) >> i_q_bits;
-			delta_u[i_block_pos] = (int32_t)(((int32_t)abs(p_coef[i_block_pos]) * p_quant_coeff[i_block_pos] - (i_level << i_q_bits)) >> i_q_bits8 );
+		quant->quant[i_index](p_coef,
+								p_q_coef,
+								p_quant_coeff,
+								delta_u,
+								i_add,
+								i_q_bits,
+								p_ac_sum,
+								0) ;
 #endif
-			*p_ac_sum += i_level;
-			i_level *= i_sign;
-			p_q_coef[i_block_pos] = x265_clip3_int32( i_level, -32768, 32767 );
-		} // for n
 		if( h->pps[0].i_sign_hide_flag )
 		{
 			if(*p_ac_sum>=2)
@@ -1966,7 +2157,7 @@ void x265_tr_quant_my_x_t(x265_t *h,
 						x265_tr_quant_t *tr_quant,
 						int32_t bit_depth,
 						uint32_t i_mode,
-						spixel* p_blk_resi,
+						short_pixel* p_blk_resi,
 						uint32_t i_stride,
 						int32_t* p_coeff,
 						int32_t i_width,
@@ -2001,7 +2192,7 @@ void x265_tr_quant_my_x_t(x265_t *h,
 void x265_tr_quant_transform_nxn(x265_t *h,
 									x265_tr_quant_t *tr_quant,
 									x265_data_cu_t* cu,
-									spixel *p_residual,
+									short_pixel *p_residual,
 									uint32_t i_stride,
 									x265_coeff_t *p_coeff,
 #if X265_ADAPTIVE_QP_SELECTION
@@ -2018,6 +2209,7 @@ void x265_tr_quant_transform_nxn(x265_t *h,
 	uint32_t j = 0, k = 0 ;
 	uint32_t i_mode;  //luma intra pred
 	int32_t i_bit_depth = 0;
+	int32_t i_transform_skip_index = 0 ;
 	int32_t i_index = 0 ;
 	x265_transform_t *transform = NULL ;
 
@@ -2051,41 +2243,24 @@ void x265_tr_quant_transform_nxn(x265_t *h,
 									? h->param.sps.i_bit_depth_y
 									: h->param.sps.i_bit_depth_c;
 
-	i_index = h->global.convert_to_bit[i_width] ;
-	transform = &tr_quant->transform ;
 	if(b_use_transform_skip)
 	{
-		x265_tr_quant_x_transform_skip(h,
-										tr_quant,
-										i_bit_depth,
-										p_residual,
-										i_stride,
-										tr_quant->temp_coeff,
-										i_width,
-										i_height );
+		i_transform_skip_index = 1 ;
 	}
 	else
 	{
-		if ( i_width > 4 )
-		{
-			transform->tr[i_index](p_residual,
-									i_stride,
-									tr_quant->temp_coeff,
-									i_bit_depth) ;
-		}
-		else
-		{
-			x265_tr_quant_x_t(h,
-							tr_quant,
-							i_bit_depth,
-							i_mode,
-							p_residual,
-							i_stride,
-							tr_quant->temp_coeff,
-							i_width,
-							i_height );
-		}
+		i_transform_skip_index = 0 ;
 	}
+	i_index = h->global.convert_to_bit[i_width] ;
+	if ((4 == i_width) && (4 == i_height) && (i_mode != X265_REG_DCT))
+	{
+		i_index = 4 ;
+	}
+	transform = &tr_quant->transform ;
+	transform->tr[i_transform_skip_index][i_index](p_residual,
+													i_stride,
+													tr_quant->temp_coeff,
+													i_bit_depth) ;
 
 	x265_tr_quant_x_quant( h,
 							tr_quant,
@@ -2107,14 +2282,14 @@ void x265_tr_quant_my_x_it(x265_tr_quant_t *tr_quant,
 						int32_t i_bit_depth,
 						uint32_t i_mode,
 						int32_t* p_coef,
-						spixel* p_residual,
+						short_pixel* p_residual,
 						uint32_t i_stride,
 						int32_t i_width,
 						int32_t i_height )
 {
 	int64_t i_start_time = 0 ;
 	int64_t i_end_time = 0 ;
-	spixel residual[8192] ;
+	short_pixel residual[8192] ;
 
 	i_start_time = x265_get_timer_state () ;
 	i_end_time = x265_get_timer_state () ;
@@ -2142,7 +2317,7 @@ void x265_tr_quant_inv_transform_nxn(x265_t *h,
 									int32_t b_trans_quant_bypass,
 									enum text_type_e i_text_type,
 									uint32_t i_mode,
-									spixel *p_residual,
+									short_pixel *p_residual,
 									uint32_t i_stride,
 									x265_coeff_t *p_coeff,
 									uint32_t i_width,
@@ -2153,7 +2328,11 @@ void x265_tr_quant_inv_transform_nxn(x265_t *h,
 	uint32_t k = 0 ;
 	uint32_t j = 0 ;
 	int32_t i_bit_depth = 0 ;
+	int32_t i_transform_skip_index = 0 ;
 	int32_t i_index = 0 ;
+	int32_t *p_dequant_coef = NULL ;
+	int32_t i_scale = 0 ;
+	x265_quant_t *quant = NULL ;
 	x265_transform_t *transform = NULL ;
 
 	if(b_trans_quant_bypass)
@@ -2170,50 +2349,37 @@ void x265_tr_quant_inv_transform_nxn(x265_t *h,
 	i_bit_depth = i_text_type == TEXT_LUMA
 					? h->param.sps.i_bit_depth_y
 					: h->param.sps.i_bit_depth_c;
-	i_index = h->global.convert_to_bit[i_width] ;
-	transform = &tr_quant->transform ;
+	p_dequant_coef = tr_quant->dequant_coef[h->global.convert_to_bit[i_width]]
+	                                        [i_scaling_list_type][tr_quant->qp_param.i_rem];
+	i_scale = inv_quant_scales[tr_quant->qp_param.i_rem] << tr_quant->qp_param.i_per;
 
-	x265_tr_quant_x_dequant(h,
-							tr_quant,
-							i_bit_depth,
-							p_coeff,
-							tr_quant->temp_coeff,
-							i_width,
-							i_height,
-							i_scaling_list_type);
 	if(b_use_transform_skip)
 	{
-		x265_tr_quant_x_i_transform_skip(h,
-										tr_quant,
-										i_bit_depth,
-										tr_quant->temp_coeff,
-										p_residual,
-										i_stride,
-										i_width,
-										i_height );
+		i_transform_skip_index = 1 ;
 	}
 	else
 	{
-		if (i_width > 4)
-		{
-			transform->itr[i_index](p_residual,
-									i_stride,
-									tr_quant->temp_coeff,
-									i_bit_depth) ;
-		}
-		else
-		{
-			x265_tr_quant_x_it(tr_quant,
-							i_bit_depth,
-							i_mode,
-							tr_quant->temp_coeff,
-							p_residual,
-							i_stride,
-							i_width,
-							i_height );
-		}
+		i_transform_skip_index = 0 ;
 	}
+	i_index = h->global.convert_to_bit[i_width] ;
+	if ((4 == i_width) && (4 == i_height) && (i_mode != X265_REG_DCT))
+	{
+		i_index = 4 ;
+	}
+	quant = &tr_quant->quant ;
+	transform = &tr_quant->transform ;
 
+	quant->dequant[i_index](p_coeff,
+							tr_quant->temp_coeff,
+							p_dequant_coef,
+							i_bit_depth,
+							tr_quant->qp_param.i_per,
+							i_scale,
+							tr_quant->b_scaling_list_enabled_flag) ;
+	transform->itr[i_transform_skip_index][i_index](p_residual,
+													i_stride,
+													tr_quant->temp_coeff,
+													i_bit_depth) ;
 	/*
 	x265_tr_quant_print_dequant_residual (p_residual,
 											i_stride,
@@ -2227,7 +2393,7 @@ void x265_tr_quant_inv_recur_transform_nxn(x265_t *h,
 											x265_data_cu_t *cu,
 											uint32_t i_abs_part_idx,
 											enum text_type_e i_text_type,
-											spixel* p_residual,
+											short_pixel* p_residual,
 											uint32_t i_addr,
 											uint32_t i_stride,
 											uint32_t i_width,
@@ -2240,7 +2406,7 @@ void x265_tr_quant_inv_recur_transform_nxn(x265_t *h,
 	uint32_t i_depth = 0 ;
 	uint32_t i_log2_tr_size = 0 ;
 	uint32_t i_q_pdiv = 0 ;
-	spixel* p_resi = NULL;
+	short_pixel* p_resi = NULL;
 	int32_t i_scaling_list_type = 0 ;
 	int32_t i_tr_width = 0, i_tr_height = 0;
 	uint32_t i_addr_offset = 0 ;
@@ -2377,7 +2543,7 @@ void x265_tr_quant_x_t(x265_t *h,
 						x265_tr_quant_t *tr_quant,
 						int32_t bit_depth,
 						uint32_t i_mode,
-						spixel* p_blk_resi,
+						short_pixel* p_blk_resi,
 						uint32_t i_stride,
 						int32_t* p_coeff,
 						int32_t i_width,
@@ -2419,7 +2585,7 @@ void x265_tr_quant_x_it(x265_tr_quant_t *tr_quant,
 						int32_t i_bit_depth,
 						uint32_t i_mode,
 						int32_t* p_coef,
-						spixel* p_residual,
+						short_pixel* p_residual,
 						uint32_t i_stride,
 						int32_t i_width,
 						int32_t i_height )
@@ -2457,7 +2623,7 @@ void x265_tr_quant_x_it(x265_tr_quant_t *tr_quant,
 void x265_tr_quant_x_transform_skip(x265_t *h,
 									x265_tr_quant_t *tr_quant,
 									int32_t bit_depth,
-									spixel* p_blk_resi,
+									short_pixel* p_blk_resi,
 									uint32_t i_stride,
 									int32_t* ps_coeff,
 									int32_t width,
@@ -2505,7 +2671,7 @@ void x265_tr_quant_x_i_transform_skip(x265_t *h,
 										x265_tr_quant_t *tr_quant,
 										int32_t i_bit_depth,
 										int32_t* p_coef,
-										spixel* p_residual,
+										short_pixel* p_residual,
 										uint32_t i_stride,
 										int32_t i_width,
 										int32_t i_height )

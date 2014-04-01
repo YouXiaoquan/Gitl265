@@ -13,16 +13,16 @@ default:
 
 SRCS = common/common.c common/list.c common/scan.c common/mv.c common/cpu.c \
 	   common/pattern.c common/bitstream.c common/set.c common/pic_sym.c \
-	   common/simage.c common/image.c common/frame.c common/mc.c common/slice.c \
+	   common/short_image.c common/image.c common/frame.c common/mc.c common/slice.c \
 	   common/rd_cost_weight_prediction.c \
-	   common/satd.c common/rd_cost.c \
-	   common/transform.c common/tr_quant.c \
+	   common/sad.c common/sse.c common/satd.c common/rd_cost.c \
+	   common/transform.c common/quant.c common/tr_quant.c \
 	   common/rate_dist_opt_quant_ssse3.c \
 	   common/loop_filter.c \
 	   common/motion_info.c common/sample_adaptive_offset.c \
 	   common/tmvp_data_cu.c common/base_data_cu.c common/data_cu.c \
-	   common/weight_prediction.c common/intra_pred.c common/prediction.c \
-	   common/ip.c common/interpolation_filter.c \
+	   common/weight_prediction.c \
+	   common/intra_pred.c common/ip.c common/prediction.c \
 	   common/x86/timer_test.c \
 	   encoder/encoder.c encoder/enc_global.c \
 	   encoder/enc_top.c encoder/enc_gop.c encoder/weight_pred_analysis.c \
@@ -62,17 +62,26 @@ X86SRC0 = cpu-a.asm const-a.asm timer-a.asm \
 			intra_pred_x86-a.asm \
 			rdoq.asm \
 			timer_test_x86-a.asm \
+			rd_cost_sads_ssse3-a.asm \
+			rd_cost_sses_ssse3-a.asm \
 			rd_cost_hads_ssse3-a.asm \
 			ip_coeff_ssse3_x86-a.asm \
+			ip_copy_p_1_ssse3_x86-a.asm \
+			ip_copy_p_2_ssse3_x86-a.asm \
+			ip_copy_s_0_ssse3_x86-a.asm \
 			ip_hor_p_1_ssse3_x86-a.asm \
 			ip_hor_p_2_ssse3_x86-a.asm \
 			ip_ver_p_1_ssse3_x86-a.asm \
 			ip_ver_p_2_ssse3_x86-a.asm \
 			ip_ver_s_0_ssse3_x86-a.asm \
 			transform_coeff_ssse3_x86-a.asm \
+			transform_4_ssse3_x86-a.asm \
 			transform_8_ssse3_x86-a.asm \
 			transform_16_ssse3_x86-a.asm \
-			transform_32_ssse3_x86-a.asm
+			transform_32_ssse3_x86-a.asm \
+			transform_dst_ssse3_x86-a.asm \
+			transform_skip_ssse3_x86-a.asm \
+			quant_ssse3_x86-a.asm
 X86SRC = $(X86SRC0:%=common/x86/%)
 
 
@@ -131,7 +140,6 @@ clean:
 	rm -f checkasm checkasm.exe $(OBJCHK)
 	rm -f $(SRC2:%.c=%.gcda) $(SRC2:%.c=%.gcno) *.dyn pgopti.dpi pgopti.dpi.lock
 	rm -f config.h
-	rm -f config.mak
-	
+	rm -f config.mak	
 
 	

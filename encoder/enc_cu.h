@@ -4,6 +4,9 @@
 #ifndef X265_ENCODER_CU_H
 #define X265_ENCODER_CU_H
 
+/** \file     enc_cu.h
+    \brief    Coding Unit (CU) encoder class (header)
+*/
 
 typedef struct
 {
@@ -12,10 +15,10 @@ typedef struct
 	uint8_t i_total_depth ;
 
 	x265_image_t** pred_image_best ; ///< best Prediction _image for each depth
-	x265_simage_t** resi_image_best ; ///< best Residual _image for each depth
+	x265_short_image_t** resi_image_best ; ///< best Residual _image for each depth
 	x265_image_t** reco_image_best ; ///< best Reconstruction _image for each depth
 	x265_image_t** pred_image_temp ; ///< temporary Prediction _image for each depth
-	x265_simage_t** resi_image_temp ; ///< temporary Residual _image for each depth
+	x265_short_image_t** resi_image_temp ; ///< temporary Residual _image for each depth
 	x265_image_t** reco_image_temp ; ///< temporary Reconstruction _image for each depth
 	x265_image_t** orig_image ;     ///< Original _image for each depth
 

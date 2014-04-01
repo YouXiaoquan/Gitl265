@@ -2,7 +2,9 @@
 
 #include "common.h"
 
-
+/** \file     pattern.c
+    \brief    neighbouring pixel access classes
+*/
 
 x265_pattern_class_static_t *p_pattern_class_static ;
 
@@ -99,12 +101,12 @@ void x265_pattern_class_static_deinit ()
 // Public member functions (TComPatternParam)
 // ====================================================================================================================
 
-/** \param  piTexture     pixel data
- \param  iRoiWidth     pattern width
- \param  iRoiHeight    pattern height
- \param  iStride       buffer stride
- \param  iOffsetLeft   neighbour offset (left)
- \param  iOffsetAbove  neighbour offset (above)
+/** \param  p_texture     pixel data
+ \param  i_roi_width     pattern width
+ \param  i_roi_height    pattern height
+ \param  i_stride       buffer stride
+ \param  i_offset_left   neighbour offset (left)
+ \param  i_offset_above  neighbour offset (above)
  */
 void x265_pattern_param_set_pattern_param_pel ( x265_pattern_param_t *pattern_param,
 												pixel *p_texture,
@@ -125,14 +127,14 @@ void x265_pattern_param_set_pattern_param_pel ( x265_pattern_param_t *pattern_pa
 
 
 /**
- \param  pcCU          CU data structure
- \param  iComp         component index (0=Y, 1=Cb, 2=Cr)
- \param  iRoiWidth     pattern width
- \param  iRoiHeight    pattern height
- \param  iStride       buffer stride
- \param  iOffsetLeft   neighbour offset (left)
- \param  iOffsetAbove  neighbour offset (above)
- \param  uiAbsPartIdx  part index
+ \param  cu          CU data structure
+ \param  i_comp         component index (0=Y, 1=Cb, 2=Cr)
+ \param  i_roi_width     pattern width
+ \param  i_roi_height    pattern height
+ \param  i_stride       buffer stride
+ \param  i_offset_left   neighbour offset (left)
+ \param  i_offset_above  neighbour offset (above)
+ \param  i_abs_part_idx  part index
  */
 void x265_pattern_param_set_pattern_param_cu ( x265_t *h,
 												x265_pattern_param_t *pattern_param,
@@ -906,8 +908,6 @@ pixel *x265_pattern_get_adi_cr_buf ( x265_pattern_t *pattern,
  *
  * the prediction mode index is used to determine whether a smoothed reference sample buffer is returned.
  */
-
-
 pixel* x265_pattern_get_predictor_ptr(x265_pattern_t *pattern,
 										uint32_t i_dir_mode,
 										uint32_t i_log2_blk_size,

@@ -1,4 +1,7 @@
-
+/** \file     data_cu.c
+    \brief    CU data structure
+    \todo     not all entities are documented
+*/
 
 #include "common.h"
 
@@ -453,6 +456,8 @@ int x265_data_cu_create ( x265_data_cu_t *cu,
 	memset ( cu->tr_coeff_cb, 0, i_width * i_height * sizeof(x265_coeff_t) / 4 ) ;
 	memset ( cu->tr_coeff_cr, 0, i_width * i_height * sizeof(x265_coeff_t) / 4 ) ;
 
+
+#if X265_ADAPTIVE_QP_SELECTION
 	if ( b_global_rmarl_buffer )
 	{
 		if ( NULL == p_data_cu_class_static->glb_arl_coeff_y )
@@ -472,14 +477,18 @@ int x265_data_cu_create ( x265_data_cu_t *cu,
 		CHECKED_MALLOCZERO ( cu->arl_coeff_cb, i_width * i_height * sizeof(int32_t) / 4 ) ;
 		CHECKED_MALLOCZERO ( cu->arl_coeff_cr, i_width * i_height * sizeof(int32_t) / 4 ) ;
 	}
+#endif
 
 	CHECKED_MALLOCZERO ( cu->ipcm_sample_y, i_width * i_height * sizeof(pixel) ) ;
 	CHECKED_MALLOCZERO ( cu->ipcm_sample_cb, i_width * i_height * sizeof(pixel) / 4 ) ;
 	CHECKED_MALLOCZERO ( cu->ipcm_sample_cr, i_width * i_height * sizeof(pixel) / 4 ) ;
 
 	CHECKED_MALLOCZERO ( cu->slice_segment_start_cu, i_num_partition * sizeof(uint32_t) ) ;
+
+	// create pattern memory
 	CHECKED_MALLOCZERO ( cu->pattern, sizeof(x265_pattern_t) ) ;
 
+	// create motion vector fields
 	cu->cu_above_left = NULL ;
 	cu->cu_above_right = NULL ;
 
@@ -496,6 +505,7 @@ void x265_data_cu_destroy ( x265_data_cu_t *cu )
 
 	x265_free ( cu->pattern ) ;
 
+	// encoder-side buffer free
 	x265_free ( cu->width ) ;
 	x265_free ( cu->height ) ;
 	x265_free ( cu->part_size ) ;
@@ -510,16 +520,17 @@ void x265_data_cu_destroy ( x265_data_cu_t *cu )
 	x265_free ( cu->tr_coeff_cb ) ;
 	x265_free ( cu->tr_coeff_cr ) ;
 
+#if X265_ADAPTIVE_QP_SELECTION
 	if ( !cu->b_arl_coeff_is_aliased_allocation )
 	{
 		x265_free ( cu->arl_coeff_y ) ;
 		x265_free ( cu->arl_coeff_cb ) ;
 		x265_free ( cu->arl_coeff_cr ) ;
 	}
-
 	x265_free ( p_data_cu_class_static->glb_arl_coeff_y ) ;
 	x265_free ( p_data_cu_class_static->glb_arl_coeff_cb ) ;
 	x265_free ( p_data_cu_class_static->glb_arl_coeff_cr ) ;
+#endif
 
 	x265_free ( cu->ipcm_sample_y ) ;
 	x265_free ( cu->ipcm_sample_cb ) ;
@@ -548,16 +559,18 @@ void x265_data_cu_destroy ( x265_data_cu_t *cu )
 	cu->tr_coeff_cb = NULL ;
 	cu->tr_coeff_cr = NULL ;
 
+
+#if X265_ADAPTIVE_QP_SELECTION
 	if ( !cu->b_arl_coeff_is_aliased_allocation )
 	{
 		cu->arl_coeff_y = NULL ;
 		cu->arl_coeff_cb = NULL ;
 		cu->arl_coeff_cr = NULL ;
 	}
-
 	p_data_cu_class_static->glb_arl_coeff_y = NULL ;
 	p_data_cu_class_static->glb_arl_coeff_cb = NULL ;
 	p_data_cu_class_static->glb_arl_coeff_cr = NULL ;
+#endif
 
 	cu->ipcm_sample_y = NULL ;
 	cu->ipcm_sample_cb = NULL ;
@@ -572,6 +585,17 @@ void x265_data_cu_destroy ( x265_data_cu_t *cu )
 	cu->cu_above_right = NULL ;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Initialization
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ - initialize top-level CU
+ - internal buffers are already created
+ - set values before encoding a CU
+
+ \param  i_cu_addr   CU address
+ */
 void x265_data_cu_init_cu ( x265_t *h, x265_data_cu_t *cu, uint32_t i_cu_addr )
 {
 	int32_t loop = 0 ;
@@ -2020,9 +2044,9 @@ x265_base_data_cu_t* x265_data_cu_get_pu_above_right_adi ( x265_t *h,
 }
 
 /** Get left QpMinCu
-*\param   uiLPartUnitIdx
+*\param   p_part_unit_idx
 *\param   i_curr_abs_idx_in_lcu
-*\returns TComDataCU*   point of TComDataCU of left QpMinCu
+*\returns x265_data_cu_t*   point of x265_data_cu_t of left qp_min_cu
 */
 x265_data_cu_t *x265_data_cu_get_qp_min_cu_left ( x265_t *h,
 												x265_data_cu_t *cu,
@@ -2052,9 +2076,9 @@ x265_data_cu_t *x265_data_cu_get_qp_min_cu_left ( x265_t *h,
 }
 
 /** Get Above QpMinCu
-*\param   aPartUnitIdx
-*\param   currAbsIdxInLCU
-*\returns TComDataCU*   point of TComDataCU of above QpMinCu
+*\param   p_part_unit_idx
+*\param   i_curr_abs_idx_in_lcu
+*\returns x265_data_cu_t*   point of x265_data_cu_t of above qp_min_cu
 */
 x265_data_cu_t *x265_data_cu_get_qp_min_cu_above ( x265_t *h,
 													x265_data_cu_t *cu,
@@ -2083,6 +2107,10 @@ x265_data_cu_t *x265_data_cu_get_qp_min_cu_above ( x265_t *h,
 	return h->data_cu ;
 }
 
+/** Get reference QP from left QpMinCu or latest coded QP
+*\param   i_curr_abs_idx_in_lcu
+*\returns Char   reference QP value
+*/
 int8_t x265_data_cu_get_ref_qp( x265_t *h, x265_data_cu_t *cu, uint32_t i_curr_abs_idx_in_lcu )
 {
 	x265_data_cu_t *cu_left = NULL ;
@@ -2105,6 +2133,12 @@ int8_t x265_data_cu_get_ref_qp( x265_t *h, x265_data_cu_t *cu, uint32_t i_curr_a
 					  + 1) >> 1);
 }
 
+/** Get allowed chroma intra modes
+*\param   i_abs_part_idx
+*\param   mode_list  pointer to chroma intra modes array
+*\returns
+*- fill mode_list with chroma intra modes
+*/
 void x265_data_cu_get_allowed_chroma_dir( x265_data_cu_t* cu,
 										uint32_t i_abs_part_idx,
 										uint32_t* mode_list )
@@ -2130,7 +2164,12 @@ void x265_data_cu_get_allowed_chroma_dir( x265_data_cu_t* cu,
 	}
 }
 
-
+/** Get most probable intra modes
+*\param   i_abs_part_idx
+*\param   intra_dir_pred  pointer to the array for MPM storage
+*\param   pi_mode          it is set with MPM mode in case both MPM are equal. It is used to restrict RD search at encode side.
+*\returns Number of MPM
+*/
 int32_t x265_data_cu_get_intra_dir_luma_predictor ( x265_t *h,
 													x265_data_cu_t *cu,
 													uint32_t i_abs_part_idx,
@@ -2325,6 +2364,15 @@ void x265_data_cu_set_part_size_sub_parts ( x265_t *h,
 
 }
 
+
+/** Sets a coded block flag for all sub-partitions of a partition
+ * \param i_cbf The value of the coded block flag to be set
+ * \param i_text_type
+ * \param i_abs_part_idx
+ * \param i_part_idx
+ * \param i_depth
+ * \returns Void
+ */
 void x265_data_cu_set_cbf_sub_parts_p7_2 ( x265_t *h,
 										x265_data_cu_t* cu,
 										uint32_t i_cbf,
@@ -3259,6 +3307,11 @@ void x265_data_cu_derive_left_bottom_idx( x265_t *h,
 	}
 }
 
+/** Derives the partition index of neighbouring bottom right block
+ * \param [in]  eCUMode
+ * \param [in]  i_part_idx
+ * \param [out] p_part_idx_rb
+ */
 void x265_data_cu_derive_right_bottom_idx ( x265_t *h,
 											x265_data_cu_t* cu,
 											uint32_t i_part_idx,
@@ -3331,6 +3384,14 @@ void x265_data_cu_derive_left_bottom_idx_adi( x265_t *h,
 	  *p_part_idx_lb = h->scan.raster_to_zscan[i_abs_idx];
 }
 
+/** Constructs a list of merging candidates
+ * \param i_abs_part_idx
+ * \param i_pu_idx
+ * \param i_depth
+ * \param p_mv_field_neighbours
+ * \param p_inter_dir_neighbours
+ * \param p_num_valid_merge_cand
+ */
 void x265_data_cu_get_inter_merge_candidates( x265_t *h,
 											x265_data_cu_t* cu,
 											uint32_t i_abs_part_idx,
@@ -3747,6 +3808,12 @@ void x265_data_cu_get_inter_merge_candidates( x265_t *h,
 	*p_num_valid_merge_cand = i_array_addr;
 }
 
+/** calculate the location of upper-left corner pixel and size of the current PU.
+ * \param i_part_idx  PU index within a CU
+ * \param p_x_p, p_y_p   location of the upper-left corner pixel of the current PU
+ * \param p_psw, p_psh    size of the curren PU
+ * \returns Void
+ */
 void x265_data_cu_get_part_position( x265_data_cu_t* cu,
 									uint32_t i_part_idx,
 									int32_t* p_x_p,
@@ -3813,6 +3880,13 @@ void x265_data_cu_get_part_position( x265_data_cu_t* cu,
 	}
 }
 
+/** Constructs a list of candidates for AMVP
+ * \param i_part_idx
+ * \param i_part_addr
+ * \param i_ref_pic_list
+ * \param i_ref_idx
+ * \param p_amvp_info
+ */
 void x265_data_cu_fill_mvp_cand( x265_t* h,
 								x265_data_cu_t* cu,
 								uint32_t i_part_idx,
@@ -4378,6 +4452,14 @@ int32_t x265_data_cu_x_add_mvp_cand_order( x265_t *h,
 	return 0;
 }
 
+/**
+ * \param i_ref_pic_list
+ * \param i_cu_addr
+ * \param i_part_unit_idx
+ * \param p_mv
+ * \param p_ref_idx
+ * \returns Bool
+ */
 int32_t x265_data_cu_x_get_col_mvp( x265_t *h,
 									x265_data_cu_t* cu,
 									enum ref_pic_list_e i_ref_pic_list,
@@ -4530,6 +4612,12 @@ int32_t x265_data_cu_x_get_dist_scale_factor ( x265_data_cu_t* cu,
 	return i_scale;
 }
 
+/**
+ * \param eCUMode
+ * \param i_part_idx
+ * \param p_part_idx_center
+ * \returns Void
+ */
 void x265_data_cu_x_derive_center_idx( x265_t* h,
 										x265_data_cu_t* cu,
 										uint32_t i_part_idx,

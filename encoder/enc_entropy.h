@@ -5,6 +5,10 @@
 #ifndef X265_ENCODER_ENTROPY_H
 #define X265_ENCODER_ENTROPY_H
 
+/** \file     enc_entropy.h
+    \brief    entropy encoder class (header)
+*/
+
 typedef struct _x265_enc_entropy_t x265_enc_entropy_t ;
 
 #include "enc_entropy_if.h"

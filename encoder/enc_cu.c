@@ -2,6 +2,9 @@
 
 #include "common/common.h"
 
+/** \file     enc_cu.c
+    \brief    Coding Unit (CU) encoder class
+*/
 
 void x265_enc_cu_delete ( x265_enc_cu_t *enc_cu )
 {
@@ -110,12 +113,12 @@ int x265_enc_cu_create ( x265_t *h, x265_enc_cu_t *enc_cu )
 			goto fail ;
 		}
 
-		enc_cu->resi_image_best[loop] = x265_simage_new () ;
+		enc_cu->resi_image_best[loop] = x265_short_image_new () ;
 		if ( NULL == enc_cu->resi_image_best[loop] )
 		{
 			goto fail ;
 		}
-		if ( x265_simage_create ( enc_cu->resi_image_best[loop], i_width, i_height ) )
+		if ( x265_short_image_create ( enc_cu->resi_image_best[loop], i_width, i_height ) )
 		{
 			goto fail ;
 		}
@@ -140,12 +143,12 @@ int x265_enc_cu_create ( x265_t *h, x265_enc_cu_t *enc_cu )
 			goto fail ;
 		}
 
-		enc_cu->resi_image_temp[loop] = x265_simage_new () ;
+		enc_cu->resi_image_temp[loop] = x265_short_image_new () ;
 		if ( NULL == enc_cu->resi_image_temp[loop] )
 		{
 			goto fail ;
 		}
-		if ( x265_simage_create ( enc_cu->resi_image_temp[loop], i_width, i_height ) )
+		if ( x265_short_image_create ( enc_cu->resi_image_temp[loop], i_width, i_height ) )
 		{
 			goto fail ;
 		}
@@ -243,8 +246,8 @@ void x265_enc_cu_destroy ( x265_t *h, x265_enc_cu_t *enc_cu )
 		{
 			if ( enc_cu->resi_image_best[loop] )
 			{
-				x265_simage_destroy ( enc_cu->resi_image_best[loop] ) ;
-				x265_simage_delete ( enc_cu->resi_image_best[loop] ) ;
+				x265_short_image_destroy ( enc_cu->resi_image_best[loop] ) ;
+				x265_short_image_delete ( enc_cu->resi_image_best[loop] ) ;
 				enc_cu->resi_image_best[loop] = NULL ;
 			}
 		}
@@ -288,8 +291,8 @@ void x265_enc_cu_destroy ( x265_t *h, x265_enc_cu_t *enc_cu )
 		{
 			if ( enc_cu->resi_image_temp[loop] )
 			{
-				x265_simage_destroy ( enc_cu->resi_image_temp[loop] ) ;
-				x265_simage_delete ( enc_cu->resi_image_temp[loop] ) ;
+				x265_short_image_destroy ( enc_cu->resi_image_temp[loop] ) ;
+				x265_short_image_delete ( enc_cu->resi_image_temp[loop] ) ;
 				enc_cu->resi_image_temp[loop] = NULL ;
 			}
 		}
@@ -341,7 +344,8 @@ void x265_enc_cu_deinitialize ( x265_t *h, x265_enc_cu_t *enc_cu )
 
 }
 
-
+/** \param  enc_cu pointer of CU data class
+ */
 void x265_enc_cu_compress_cu ( x265_t *h, x265_enc_cu_t *enc_cu, uint32_t i_cu_addr )
 {
 	x265_data_cu_t** ppc_best_cu = NULL ;
@@ -426,7 +430,7 @@ int x265_enc_cu_x_tu_collect_arl_stats( x265_enc_cu_t *enc_cu,
 }
 
 /** Collect ARL statistics from one LCU
- * \param pcCU
+ * \param cu
  */
 void x265_enc_cu_x_lcu_collect_arl_stats ( x265_t *h, x265_enc_cu_t *enc_cu, x265_data_cu_t *cu )
 {
@@ -484,7 +488,14 @@ void x265_enc_cu_x_lcu_collect_arl_stats ( x265_t *h, x265_enc_cu_t *enc_cu, x26
 
 #endif
 
-
+/** Compress a CU block recursively with enabling sub-LCU-level delta QP
+ *\param   ppc_best_cu
+ *\param   ppc_temp_cu
+ *\param   i_depth
+ *\returns Void
+ *
+ *- for loop of QP value to compress the current CU with all possible QP
+*/
 #if X265_AMP_ENC_SPEEDUP
 void x265_enc_cu_x_compress_cu ( x265_t *h,
 								x265_enc_cu_t *enc_cu,
@@ -1643,7 +1654,11 @@ void x265_enc_cu_derive_test_mode_amp (x265_enc_cu_t *enc_cu,
 }
 #endif
 
-
+/** check RD costs for a CU block encoded with merge
+ * \param ppc_best_cu
+ * \param ppc_temp_cu
+ * \returns Void
+ */
 void x265_enc_cu_x_check_rd_cost_merge_2nx2n ( x265_t *h,
 												x265_enc_cu_t *enc_cu,
 												x265_data_cu_t **ppc_best_cu,
@@ -1838,6 +1853,12 @@ void x265_enc_cu_x_check_rd_cost_inter ( x265_t *h,
 {
 	uint32_t i_depth = 0 ;
 	uint32_t i_sad = 0 ;
+	int32_t i_width = 0 ;
+	int32_t i_height = 0 ;
+	int32_t i_partition = 0 ;
+	x265_rd_cost_t *rd_cost = NULL ;
+
+	rd_cost = &h->rd_cost ;
 	i_depth = x265_base_data_cu_get_depth_p2 ( (x265_base_data_cu_t*)(*ppc_temp_cu), 0 ) ;
 
 	x265_base_data_cu_set_depth_sub_parts (h, (x265_base_data_cu_t*)(*ppc_temp_cu), i_depth, 0) ;
@@ -1885,14 +1906,14 @@ void x265_enc_cu_x_check_rd_cost_inter ( x265_t *h,
 			&& i_part_size == SIZE_2Nx2N
 			&& i_depth <= enc_cu->i_add_sad_depth )
 	{
-		i_sad = x265_rd_cost_get_sad_part(&h->rd_cost,
-											h->param.sps.i_bit_depth_y,
-											x265_image_get_luma_addr_p2(h, enc_cu->pred_image_temp[i_depth]),
-											x265_image_get_stride(enc_cu->pred_image_temp[i_depth]),
-											x265_image_get_luma_addr_p2(h, enc_cu->orig_image[i_depth]),
-											x265_image_get_stride(enc_cu->orig_image[i_depth]),
-											x265_data_cu_get_width_p2(*ppc_temp_cu, 0),
-											x265_data_cu_get_height_p2(*ppc_temp_cu, 0));
+		i_width = x265_data_cu_get_width_p2(*ppc_temp_cu, 0) ;
+		i_height = x265_data_cu_get_height_p2(*ppc_temp_cu, 0) ;
+		i_partition = PartitionFromSizes(i_width, i_height) ;
+		i_sad = rd_cost->sads_func[i_partition](x265_image_get_luma_addr_p2(h, enc_cu->pred_image_temp[i_depth]),
+												x265_image_get_stride(enc_cu->pred_image_temp[i_depth]),
+												x265_image_get_luma_addr_p2(h, enc_cu->orig_image[i_depth]),
+												x265_image_get_stride(enc_cu->orig_image[i_depth]),
+												h->param.sps.i_bit_depth_y);
 		enc_cu->i_temporal_sad = ((int32_t)i_sad);
 	}
 #endif
@@ -1995,7 +2016,7 @@ void x265_enc_cu_x_check_rd_cost_intra ( x265_t *h,
 	x265_enc_entropy_encode_pred_info (h, &h->enc_entropy, *ppc_temp_cu, 0, 1) ;
 	x265_enc_entropy_encode_ipcm_info (h, &h->enc_entropy, *ppc_temp_cu, 0, 1) ;
 
-
+	// Encode Coefficients
 	b_code_dqp = enc_cu->b_encode_dqp ;
 	x265_enc_entropy_encode_coeff(h,
 								&h->enc_entropy,
@@ -2035,6 +2056,13 @@ void x265_enc_cu_x_check_rd_cost_intra ( x265_t *h,
 
 }
 
+/** Check R-D costs for a CU with PCM mode.
+ * \param ppc_best_cu pointer to best mode CU data structure
+ * \param ppc_temp_cu pointer to testing mode CU data structure
+ * \returns Void
+ *
+ * \note Current PCM implementation encodes sample values in a lossless way. The distortion of PCM mode CUs are zero. PCM mode is selected if the best mode yields bits greater than that of PCM mode.
+ */
 void x265_enc_cu_x_check_intra_pcm ( x265_t *h,
 									x265_enc_cu_t *enc_cu,
 									x265_data_cu_t **ppc_best_cu,
@@ -2111,6 +2139,11 @@ void x265_enc_cu_x_check_intra_pcm ( x265_t *h,
 
 }
 
+/** check whether current try is the best with identifying the depth of current try
+ * \param ppc_best_cu
+ * \param ppc_temp_cu
+ * \returns Void
+ */
 void x265_enc_cu_x_check_best_mode ( x265_t *h,
 									x265_enc_cu_t *enc_cu,
 									x265_data_cu_t **ppc_best_cu,
@@ -2123,14 +2156,17 @@ void x265_enc_cu_x_check_best_mode ( x265_t *h,
 	//	print_double_state((*ppc_temp_cu)->f_total_cost) ;
 	if ( (*ppc_temp_cu)->f_total_cost < (*ppc_best_cu)->f_total_cost )
 	{
+		// Change Information data
 		cu = *ppc_best_cu ;
 		*ppc_best_cu = *ppc_temp_cu ;
 		*ppc_temp_cu = cu ;
 
+		// Change Prediction data
 		image = enc_cu->pred_image_best[i_depth] ;
 		enc_cu->pred_image_best[i_depth] = enc_cu->pred_image_temp[i_depth] ;
 		enc_cu->pred_image_temp[i_depth] = image ;
 
+		// Change Reconstruction data
 		image = enc_cu->reco_image_best[i_depth] ;
 		enc_cu->reco_image_best[i_depth] = enc_cu->reco_image_temp[i_depth] ;
 		enc_cu->reco_image_temp[i_depth] = image ;
@@ -2138,7 +2174,7 @@ void x265_enc_cu_x_check_best_mode ( x265_t *h,
 		image = NULL ;
 		cu = NULL ;
 
-		if ( h->param.b_use_sbac_rd )
+		if ( h->param.b_use_sbac_rd )  // store temp best CI for next CU coding
 		{
 			x265_enc_sbac_store ( h->pppc_rd_sbac_coder[i_depth][CI_TEMP_BEST],
 								h->pppc_rd_sbac_coder[i_depth][CI_NEXT_BEST] ) ;
@@ -2163,7 +2199,7 @@ void x265_enc_cu_x_check_dqp( x265_t *h, x265_enc_cu_t *enc_cu,  x265_data_cu_t*
 #if !X265_RDO_WITHOUT_DQP_BITS
 			x265_enc_entropy_reset_bits (&h->enc_entropy) ;
 			x265_enc_entropy_encode_qp (h, &h->enc_entropy, cu, 0, 0 ) ;
-			cu->f_total_cost += x265_enc_entropy_get_number_of_written_bits(&h->enc_entropy) ;
+			cu->f_total_cost += x265_enc_entropy_get_number_of_written_bits(&h->enc_entropy) ; // dQP bits
 			if( h->param.b_use_sbac_rd )
 			{
 				cu->i_total_bins += x265_enc_bin_cabac_get_bins_coded(
@@ -2179,7 +2215,7 @@ void x265_enc_cu_x_check_dqp( x265_t *h, x265_enc_cu_t *enc_cu,  x265_data_cu_t*
 											(x265_base_data_cu_t*)cu,
 											x265_data_cu_get_ref_qp(h, cu, 0 ),
 											0,
-											i_depth );
+											i_depth ); // set QP to default QP
 		}
 	}
 }

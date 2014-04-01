@@ -12,14 +12,8 @@ typedef uint32_t (*x265_satd_func)(pixel *cur,
 								pixel *org,
 								uint32_t i_stride_org ) ;
 
-typedef struct _x265_satd_t x265_satd_t ;
-struct _x265_satd_t
-{
-	x265_satd_func satd_func[64] ;
-};
-
 int PartitionFromSizes(int width, int height) ;
-void x265_satd_initialize ( x265_satd_t *satd, unsigned int cpu ) ;
+void x265_satd_initialize ( x265_satd_func *satd_func, unsigned int cpu ) ;
 
 DECLARE_ALL_PIXEL_N_HADS_4x4_FUNCTION(c)
 DECLARE_ALL_PIXEL_N_HADS_4x4_FUNCTION(cmp)

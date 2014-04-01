@@ -2,11 +2,9 @@
 
 #include "common/common.h"
 
-
-
-
-
-
+/** \file     enc_rate_ctrl.cpp
+    \brief    Rate control manager class
+*/
 
 
 void x265_enc_rc_seq_delete ( x265_enc_rc_seq_t *enc_rc_seq )

@@ -4,7 +4,12 @@
 #ifndef X265_TR_QUANT_H
 #define X265_TR_QUANT_H
 
+/** \file     tr_quant.h
+    \brief    transform and quantization class (header)
+*/
+
 #include "transform.h"
+#include "quant.h"
 
 #define X265_QUANT_IQUANT_SHIFT    20 // Q(QP%6) * IQ(QP%6) = 2^20
 #define X265_QUANT_SHIFT           14 // Q(4) = 2^14
@@ -86,6 +91,7 @@ typedef struct
 	double *err_scale [SCALING_LIST_SIZE_NUM][SCALING_LIST_NUM][SCALING_LIST_REM_NUM]; ///< array of quantization matrix coefficient 4x4
 
 	x265_transform_t transform ;
+	x265_quant_t quant ;
 
 } x265_tr_quant_t ;
 
@@ -157,7 +163,7 @@ void x265_tr_quant_deinitialize ( x265_t *h, x265_tr_quant_t *tr_quant ) ;
 void x265_tr_quant_transform_nxn(x265_t *h,
 									x265_tr_quant_t *tr_quant,
 									x265_data_cu_t* cu,
-									spixel *p_residual,
+									short_pixel *p_residual,
 									uint32_t i_stride,
 									x265_coeff_t *p_coeff,
 #if X265_ADAPTIVE_QP_SELECTION
@@ -176,7 +182,7 @@ void x265_tr_quant_inv_transform_nxn(x265_t *h,
 									int32_t b_trans_quant_bypass,
 									enum text_type_e i_text_type,
 									uint32_t i_mode,
-									spixel *p_residual,
+									short_pixel *p_residual,
 									uint32_t i_stride,
 									x265_coeff_t *p_coeff,
 									uint32_t i_width,
@@ -189,7 +195,7 @@ void x265_tr_quant_inv_recur_transform_nxn(x265_t *h,
 											x265_data_cu_t *cu,
 											uint32_t i_abs_part_idx,
 											enum text_type_e i_text_type,
-											spixel* p_residual,
+											short_pixel* p_residual,
 											uint32_t i_addr,
 											uint32_t i_stride,
 											uint32_t i_width,
@@ -316,7 +322,7 @@ void x265_tr_quant_x_t(x265_t *h,
 						x265_tr_quant_t *tr_quant,
 						int32_t bit_depth,
 						uint32_t i_mode,
-						spixel* p_blk_resi,
+						short_pixel* p_blk_resi,
 						uint32_t i_stride,
 						int32_t* p_coeff,
 						int32_t i_width,
@@ -326,7 +332,7 @@ void x265_tr_quant_x_t(x265_t *h,
 void x265_tr_quant_x_transform_skip(x265_t *h,
 									x265_tr_quant_t *tr_quant,
 									int32_t bit_depth,
-									spixel* p_blk_resi,
+									short_pixel* p_blk_resi,
 									uint32_t i_stride,
 									int32_t* ps_coeff,
 									int32_t width,
@@ -422,7 +428,7 @@ void x265_tr_quant_x_it(x265_tr_quant_t *tr_quant,
 						int32_t i_bit_depth,
 						uint32_t i_mode,
 						int32_t* p_coef,
-						spixel* p_residual,
+						short_pixel* p_residual,
 						uint32_t i_stride,
 						int32_t i_width,
 						int32_t i_height ) ;
@@ -432,7 +438,7 @@ void x265_tr_quant_x_i_transform_skip(x265_t *h,
 										x265_tr_quant_t *tr_quant,
 										int32_t i_bit_depth,
 										int32_t* p_coef,
-										spixel* p_residual,
+										short_pixel* p_residual,
 										uint32_t i_stride,
 										int32_t i_width,
 										int32_t i_height ) ;

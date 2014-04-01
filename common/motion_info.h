@@ -4,14 +4,21 @@
 #ifndef X265_MOTION_INFO_H
 #define X265_MOTION_INFO_H
 
+/** \file     motion_info.h
+    \brief    motion information handling classes (header)
+    \todo     TComMvField seems to be better to be inherited from TComMv
+*/
+
 #include "common_def.h"
 
+/// parameters for AMVP
 typedef struct _x265_amvp_info_t
 {
 	x265_mv_t mv_cand[ X265_AMVP_MAX_NUM_CANDS_MEM ] ;  ///< array of motion vector predictor candidates
 	int32_t i_n ;                                ///< number of motion vector predictor candidates
 } x265_amvp_info_t ;
 
+/// class for motion vector with reference index
 typedef struct
 {
 	x265_mv_t mv ;
@@ -19,6 +26,7 @@ typedef struct
 
 } x265_mv_field_t ;
 
+/// class for motion information in one CU
 typedef struct
 {
 	x265_mv_t* mv ;

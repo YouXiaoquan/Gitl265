@@ -4,13 +4,17 @@
 #ifndef X265_SAMPLE_ADAPTIVE_OFFSET_H
 #define X265_SAMPLE_ADAPTIVE_OFFSET_H
 
+/** \file     sample_adaptive_offset.h
+    \brief    sample adaptive offset class (header)
+*/
+
 #define X265_SAO_MAX_DEPTH 4
 #define X265_SAO_BO_BITS 5
 #define X265_LUMA_GROUP_NUM (1<<X265_SAO_BO_BITS)
 #define X265_MAX_NUM_SAO_OFFSETS 4
 #define X265_MAX_NUM_SAO_CLASS 33
 
-
+/// Sample Adaptive Offset class
 typedef struct
 {
 	int32_t *offset_bo;

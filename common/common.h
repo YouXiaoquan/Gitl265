@@ -73,7 +73,7 @@ typedef int16_t pixel ;
 typedef uint8_t pixel ;
 #endif
 
-typedef int16_t spixel ;
+typedef int16_t short_pixel ;
 typedef int32_t x265_coeff_t ;     ///< transform coefficient
 
 #include "common_def.h"
@@ -101,7 +101,7 @@ typedef struct _x265_data_cu_t x265_data_cu_t ;
 
 #include "timer.h"
 #include "cpu.h"
-#include "simage.h"
+#include "short_image.h"
 #include "image.h"
 #include "x265.h"
 #include "bitstream.h"
@@ -125,7 +125,6 @@ typedef struct _x265_data_cu_t x265_data_cu_t ;
 #include "rd_cost.h"
 #include "tr_quant.h"
 #include "loop_filter.h"
-#include "interpolation_filter.h"
 #include "weight_prediction.h"
 #include "prediction.h"
 #include "encoder/enc_top.h"
@@ -138,10 +137,10 @@ extern const uint8_t chroma_scale[58];
 void x265_log( x265_t *h, int i_level, const char *psz_fmt, ... );
 
 
-spixel x265_clip_y( x265_t *h, spixel v ) ;
-spixel x265_clip_c( x265_t *h, spixel v ) ;
+short_pixel x265_clip_y( x265_t *h, short_pixel v ) ;
+short_pixel x265_clip_c( x265_t *h, short_pixel v ) ;
 
-static ALWAYS_INLINE spixel x265_clip3_pixel( spixel v, spixel i_min, spixel i_max )
+static ALWAYS_INLINE short_pixel x265_clip3_pixel( short_pixel v, short_pixel i_min, short_pixel i_max )
 {
     return ( (v < i_min) ? i_min : (v > i_max) ? i_max : v );
 }
@@ -380,9 +379,9 @@ int32_t memory_compare_p(pixel *src1,
 						int32_t i_src_stride2,
 						int32_t i_width,
 						int32_t i_height ) ;
-int32_t memory_compare_s (spixel *src1,
+int32_t memory_compare_s (short_pixel *src1,
 						int32_t i_src_stride1,
-						spixel *src2,
+						short_pixel *src2,
 						int32_t i_src_stride2,
 						int32_t i_width,
 						int32_t i_height ) ;

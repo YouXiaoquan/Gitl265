@@ -78,7 +78,7 @@ uint32_t x265_pixel_hads_##i_cols##x##i_rows##_##extent(pixel *cur, \
 	int64_t i_end_time = 0 ; \
 \
 	i_start_time = x265_get_timer_state () ; \
-	i_satd1 = x265_pixel_hads_##i_rows##x##i_cols##_##extent1( cur, \
+	i_satd1 = x265_pixel_hads_##i_cols##x##i_rows##_##extent1( cur, \
 																i_stride_cur, \
 																org, \
 																i_stride_org) ; \
@@ -86,7 +86,7 @@ uint32_t x265_pixel_hads_##i_cols##x##i_rows##_##extent(pixel *cur, \
 	add_timer_status_1 ( i_end_time - i_start_time ) ; \
 \
 	i_start_time = x265_get_timer_state () ; \
-	i_satd2 = x265_pixel_hads_##i_rows##x##i_cols##_##extent2( cur, \
+	i_satd2 = x265_pixel_hads_##i_cols##x##i_rows##_##extent2( cur, \
 																i_stride_cur, \
 																org, \
 																i_stride_org) ; \
@@ -95,7 +95,7 @@ uint32_t x265_pixel_hads_##i_cols##x##i_rows##_##extent(pixel *cur, \
 \
 	if ( i_satd1 != i_satd2 ) \
 	{ \
-		fprintf ( stderr, "x265_pixel_hads_%dx%d\n", i_rows, i_cols ) ; \
+		fprintf ( stderr, "x265_pixel_hads_%dx%d\n", i_cols, i_rows ) ; \
 		exit(0) ; \
 	} \
 	\
@@ -311,13 +311,13 @@ int PartitionFromSizes(int width, int height)
 }
 
 
-void x265_satd_initialize ( x265_satd_t *satd, unsigned int cpu )
+void x265_satd_initialize ( x265_satd_func *satd_func, unsigned int cpu )
 {
-	X265_SATD_INITIALIZE_ALL(satd->satd_func,c)
+	X265_SATD_INITIALIZE_ALL(satd_func,c)
 
 	if ( cpu & X265_CPU_SSSE3 )
 	{
-		X265_SATD_INITIALIZE_ALL(satd->satd_func,ssse3)
+		X265_SATD_INITIALIZE_ALL(satd_func,ssse3)
 	}
 }
 
@@ -518,6 +518,4 @@ uint32_t x265_pixel_hads_8x8_c(pixel *cur,
 
 DEFINE_ALL_PIXEL_N_HADS_4x4_FUNCTION(C)
 DEFINE_ALL_PIXEL_HADS_FUNCTION_CMP(cmp, c, ssse3)
-
-
 

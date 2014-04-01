@@ -4,6 +4,9 @@
 #ifndef X265_ENCODER_RATE_CTRL_H
 #define X265_ENCODER_RATE_CTRL_H
 
+/** \file     enc_rate_ctrl.h
+    \brief    Rate control manager class
+*/
 
 typedef struct
 {

@@ -166,14 +166,14 @@ void GetCurrentFileTime(ULARGE_INTEGER *pFileTime)
 
 void PrintAll(int i_start, int i_width)
 {
-	printf("satd_func[%d] = x265_pixel_hads_%dx4_##extent ; \\\n", i_start + 0, i_width) ;
-	printf("satd_func[%d] = x265_pixel_hads_%dx8_##extent ; \\\n", i_start + 1, i_width) ;
-	printf("satd_func[%d] = x265_pixel_hads_%dx12_##extent ; \\\n", i_start + 2, i_width) ;
-	printf("satd_func[%d] = x265_pixel_hads_%dx16_##extent ; \\\n", i_start + 3, i_width) ;
-	printf("satd_func[%d] = x265_pixel_hads_%dx24_##extent ; \\\n", i_start + 4, i_width) ;
-	printf("satd_func[%d] = x265_pixel_hads_%dx32_##extent ; \\\n", i_start + 5, i_width) ;
-	printf("satd_func[%d] = x265_pixel_hads_%dx48_##extent ; \\\n", i_start + 6, i_width) ;
-	printf("satd_func[%d] = x265_pixel_hads_%dx64_##extent ; \\\n", i_start + 7, i_width) ;
+	fprintf(stderr, "sads_half_func[ %d] = x265_pixel_sads_half_%dx4_##extent ; \\\n", i_start + 0, i_width) ;
+	fprintf(stderr, "sads_half_func[ %d] = x265_pixel_sads_half_%dx8_##extent ; \\\n", i_start + 1, i_width) ;
+	fprintf(stderr, "sads_half_func[ %d] = x265_pixel_sads_half_%dx12_##extent ; \\\n", i_start + 2, i_width) ;
+	fprintf(stderr, "sads_half_func[ %d] = x265_pixel_sads_half_%dx16_##extent ; \\\n", i_start + 3, i_width) ;
+	fprintf(stderr, "sads_half_func[ %d] = x265_pixel_sads_half_%dx24_##extent ; \\\n", i_start + 4, i_width) ;
+	fprintf(stderr, "sads_half_func[ %d] = x265_pixel_sads_half_%dx32_##extent ; \\\n", i_start + 5, i_width) ;
+	fprintf(stderr, "sads_half_func[ %d] = x265_pixel_sads_half_%dx48_##extent ; \\\n", i_start + 6, i_width) ;
+	fprintf(stderr, "sads_half_func[ %d] = x265_pixel_sads_half_%dx64_##extent ; \\\n", i_start + 7, i_width) ;
 }
 
 int main( int argc, char **argv )

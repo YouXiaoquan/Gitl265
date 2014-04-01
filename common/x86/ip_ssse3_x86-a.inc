@@ -46,6 +46,11 @@
 	PSRLDQ %2, 4
 	MOVD r0, %2
 	MOV [%1+4], ax
+%elif 5 == %3
+	MOVD [%1], %2
+	PSRLDQ %2, 4
+	MOVD r0, %2
+	MOV [%1+4], aL
 %elif 4 == %3
 	MOVD [%1], %2
 %elif 2 == %3

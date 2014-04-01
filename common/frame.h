@@ -30,9 +30,17 @@ struct _x265_frame_t
     int64_t i_dts;
     uint8_t b_fdec;
     int     i_plane;
+
+    // ------------------------------------------------------------------------------------------------------------------
+    //  Parameter for general YUV buffer usage
+    // ------------------------------------------------------------------------------------------------------------------
     int     i_stride[3];
     int     i_width[3];
     int     i_lines[3];
+
+    // ------------------------------------------------------------------------------------------------------------------
+    //  YUV buffer
+    // ------------------------------------------------------------------------------------------------------------------
     pixel *plane[3];
     pixel *buffer[4];
 
@@ -75,6 +83,7 @@ pixel* x265_frame_get_buf_y ( x265_frame_t *frame ) ;
 pixel* x265_frame_get_buf_u ( x265_frame_t *frame ) ;
 pixel* x265_frame_get_buf_v ( x265_frame_t *frame ) ;
 
+//  Access starting position of YUV buffer
 pixel* x265_frame_get_luma_addr_p2 ( x265_t *h, x265_frame_t *frame ) ;
 pixel* x265_frame_get_cb_addr_p2 ( x265_t *h, x265_frame_t *frame ) ;
 pixel* x265_frame_get_cr_addr_p2 ( x265_t *h, x265_frame_t *frame ) ;
