@@ -1,4 +1,5 @@
 About x265
+
     This project is another version of x265, a open source video encoder base on the High Efficiency Video Coding (HEVC) Standard written by liaozixin, a graduate student of Sun Yat-sen University. The target of this project is to create a realtime HEVC encoder by open source and common contribution of world around engineers.
     There are three contributions in this project:
     First of all, by reference to the source code of x264 and HM10.0, I design a video encoder base on the HEVC standard which have the similar design architecture and code style of x264. 
