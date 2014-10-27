@@ -1,6 +1,6 @@
 About x265
 
-This work was partially supported by:
+**This work was partially supported by:**
 
 *National Natural Science Foundation, P.R.China, under Grant 61173081*
 
