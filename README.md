@@ -1,5 +1,11 @@
 About x265
 
+This work was partially supported by:
+
+*National Natural Science Foundation, P.R.China, under Grant 61173081*
+
+*Guangdong Natural Science Foundation, P.R.China, under Grant S2011020001215.*
+
 This project is another version of x265, a open source video encoder base on the High Efficiency Video Coding (HEVC) Standard written by liaozixin, a graduate student of Sun Yat-sen University. The target of this project is to create a realtime HEVC encoder by open source and common contribution of world around engineers.
 
 There are three contributions in this project:
